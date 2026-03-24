@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'ionic.zentrumtvde',
-  appName: 'zentrumtvde',
+  appId: 'com.zentrumtvde.app',
+  appName: 'Zentrum TVDE',
   webDir: 'dist'
 };
 

@@ -8,6 +8,7 @@ import {
   IonNote,
 } from '@ionic/react';
 import { carSport, flash, people } from 'ionicons/icons';
+import { useMemo } from 'react';
 import { Autoplay, Pagination } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import AppShell from '../components/AppShell';
@@ -21,6 +22,59 @@ import './SectionPage.css';
 const Home: React.FC = () => {
   const { data, loading, error, refresh } = useFrontpageData();
   const heroes = data?.heroes ?? [];
+  const resolvedHeroLinks = useMemo(() => {
+    const cmsPages = data?.cms_pages ?? [];
+
+    const resolveLink = (url: string | null): string | null => {
+      if (!url) {
+        return null;
+      }
+
+      const normalized = (() => {
+        try {
+          const parsed = new URL(url, 'https://zentrum-tvde.com');
+          return parsed.pathname.replace(/\/+$/, '') || '/';
+        } catch {
+          return url.replace(/\/+$/, '') || '/';
+        }
+      })();
+
+      if (normalized === '/' || normalized === '') {
+        return '/tabs/home';
+      }
+
+      if (normalized === '/candidatura') {
+        return '/tabs/application';
+      }
+
+      if (normalized === '/blog') {
+        return '/tabs/blog';
+      }
+
+      const cmsPage = cmsPages.find((page) => {
+        const pagePath = (() => {
+          try {
+            return new URL(page.url, 'https://zentrum-tvde.com').pathname.replace(/\/+$/, '') || '/';
+          } catch {
+            return page.url.replace(/\/+$/, '') || '/';
+          }
+        })();
+
+        return pagePath === normalized || `/${page.slug}` === normalized;
+      });
+
+      if (cmsPage) {
+        return cmsPage.path;
+      }
+
+      return '/tabs/home';
+    };
+
+    return heroes.map((hero) => ({
+      primary: resolveLink(hero.cta_link),
+      secondary: resolveLink(hero.cta_secondary_link),
+    }));
+  }, [data?.cms_pages, heroes]);
 
   return (
     <AppShell
@@ -40,7 +94,7 @@ const Home: React.FC = () => {
                 loop={heroes.length > 1}
                 className="home-hero-swiper"
               >
-                {heroes.map((hero) => (
+                {heroes.map((hero, index) => (
                   <SwiperSlide key={hero.id}>
                     <div
                       className="home-hero-slide"
@@ -53,7 +107,11 @@ const Home: React.FC = () => {
                           <p>{hero.subtitle || 'Obtenha flexibilidade e autonomia, trabalhando como motorista TVDE.'}</p>
                           <div className="zt-hero-actions">
                             {hero.cta_text ? (
-                              <IonButton shape="round" color="success" href={hero.cta_link || undefined}>
+                              <IonButton
+                                shape="round"
+                                color="success"
+                                routerLink={resolvedHeroLinks[index]?.primary || '/tabs/home'}
+                              >
                                 {hero.cta_text}
                               </IonButton>
                             ) : null}
@@ -62,7 +120,7 @@ const Home: React.FC = () => {
                                 shape="round"
                                 fill="outline"
                                 color="primary"
-                                href={hero.cta_secondary_link || undefined}
+                                routerLink={resolvedHeroLinks[index]?.secondary || '/tabs/home'}
                               >
                                 {hero.cta_secondary_text}
                               </IonButton>

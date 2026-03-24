@@ -1,3 +1,4 @@
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import {
   IonBadge,
   IonButton,
@@ -30,6 +31,7 @@ import {
   type CandidateApplicationPayload,
   uploadCandidateApplicationFile,
 } from '../lib/frontpage-api';
+import { optimizeUploadFile, photoToOptimizedFile } from '../lib/upload-file-utils';
 import type {
   CandidateApplicationBootstrap,
   CandidateApplicationDocument,
@@ -156,7 +158,6 @@ const CandidateApplicationPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadingField, setUploadingField] = useState('');
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
-  const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -359,18 +360,58 @@ const CandidateApplicationPage: React.FC = () => {
 
     try {
       for (const file of Array.from(files)) {
-        const response = await uploadCandidateApplicationFile(token, field, file);
+        const optimizedFile = await optimizeUploadFile(file);
+        const response = await uploadCandidateApplicationFile(token, field, optimizedFile);
         syncApplicationState(response.application);
       }
       setMessage('Ficheiro enviado.');
-    } catch {
-      setErrorMessage('Nao foi possivel enviar o ficheiro.');
+    } catch (caughtError) {
+      setErrorMessage(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Nao foi possivel enviar o ficheiro.',
+      );
     } finally {
       setUploadingField('');
       const input = fileInputs.current[field];
       if (input) {
         input.value = '';
       }
+    }
+  };
+
+  const handleCapturePhoto = async (field: string) => {
+    if (!token) {
+      return;
+    }
+
+    setUploadingField(field);
+    setErrorMessage('');
+    setMessage('A preparar imagem...');
+
+    try {
+      const photo = await Camera.getPhoto({
+        source: CameraSource.Camera,
+        resultType: CameraResultType.Uri,
+        quality: 90,
+      });
+
+      const file = await photoToOptimizedFile(photo, field);
+      setMessage('A enviar ficheiro...');
+      const response = await uploadCandidateApplicationFile(token, field, file);
+      syncApplicationState(response.application);
+      setMessage('Ficheiro enviado.');
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error ? caughtError.message : 'Nao foi possivel usar a camera.';
+
+      if (message.toLowerCase().includes('user cancelled')) {
+        setMessage('');
+      } else {
+        setErrorMessage(message);
+      }
+    } finally {
+      setUploadingField('');
     }
   };
 
@@ -546,19 +587,6 @@ const CandidateApplicationPage: React.FC = () => {
               <p>Limite 10MB por ficheiro.</p>
               <input
                 ref={(element) => {
-                  cameraInputs.current[documentField.field] = element;
-                }}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="zt-application-file-input"
-                multiple
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  void handleUpload(documentField.field, event.target.files)
-                }
-              />
-              <input
-                ref={(element) => {
                   fileInputs.current[documentField.field] = element;
                 }}
                 type="file"
@@ -571,7 +599,7 @@ const CandidateApplicationPage: React.FC = () => {
               <div className="zt-application-upload-actions">
                 <IonButton
                   fill="outline"
-                  onClick={() => cameraInputs.current[documentField.field]?.click()}
+                  onClick={() => void handleCapturePhoto(documentField.field)}
                   disabled={uploadingField === documentField.field}
                 >
                   <IonIcon icon={cameraOutline} slot="start" />

@@ -12,6 +12,7 @@ import {
 import { lockClosed } from 'ionicons/icons';
 import type { PropsWithChildren } from 'react';
 import { adminLoginUrl } from '../lib/frontpage-api';
+import WebsiteChatWidget from './WebsiteChatWidget';
 import './AppShell.css';
 
 type AppShellProps = PropsWithChildren<{
@@ -42,6 +43,7 @@ const AppShell: React.FC<AppShellProps> = ({ title, subtitle, children }) => {
 
       <IonContent fullscreen className="zt-shell-content">
         <div className="zt-shell-body ion-padding">{children}</div>
+        <WebsiteChatWidget />
       </IonContent>
     </IonPage>
   );

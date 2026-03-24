@@ -28,6 +28,8 @@ export const candidateApplicationEndpoint = `${apiBaseUrl}/app/candidatura`;
 export const candidateApplicationSaveEndpoint = `${apiBaseUrl}/app/candidatura/save`;
 export const candidateApplicationSubmitEndpoint = `${apiBaseUrl}/app/candidatura/submit`;
 export const candidateApplicationUploadEndpoint = `${apiBaseUrl}/app/candidatura/upload`;
+export const chatSessionEndpoint = `${apiBaseUrl}/app/chat/session`;
+export const chatMessageEndpoint = `${apiBaseUrl}/app/chat/message`;
 
 export type ContactFormPayload = {
   name: string;
@@ -72,6 +74,25 @@ export type CandidateApplicationResponse = {
   application: CandidateApplicationRecord;
   message?: string;
   errors?: Record<string, string[]>;
+};
+
+export type WebsiteChatMessage = {
+  role: 'assistant' | 'user';
+  content: string;
+  created_at: string;
+};
+
+export type WebsiteChatBootstrap = {
+  enabled: boolean;
+  session_token: string;
+  assistant_name: string;
+  messages: WebsiteChatMessage[];
+};
+
+export type WebsiteChatReply = {
+  session_token: string;
+  user_message: WebsiteChatMessage;
+  assistant_message: WebsiteChatMessage;
 };
 
 export async function fetchFrontpage(): Promise<FrontpagePayload> {
@@ -193,6 +214,52 @@ export async function uploadCandidateApplicationFile(
 
   if (!response.ok || !data) {
     throw data ?? new Error('Nao foi possivel enviar o ficheiro.');
+  }
+
+  return data;
+}
+
+export async function startWebsiteChat(sessionToken?: string | null): Promise<WebsiteChatBootstrap> {
+  const response = await fetch(chatSessionEndpoint, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      session_token: sessionToken || null,
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as WebsiteChatBootstrap | null;
+
+  if (!response.ok || !data) {
+    throw new Error('Nao foi possivel iniciar o chat.');
+  }
+
+  return data;
+}
+
+export async function sendWebsiteChatMessage(
+  sessionToken: string,
+  message: string,
+): Promise<WebsiteChatReply> {
+  const response = await fetch(chatMessageEndpoint, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      session_token: sessionToken,
+      message,
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as WebsiteChatReply | null;
+
+  if (!response.ok || !data) {
+    throw new Error('Nao foi possivel enviar a mensagem.');
   }
 
   return data;
