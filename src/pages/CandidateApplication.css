@@ -1,0 +1,235 @@
+.zt-application-page {
+  --background:
+    linear-gradient(180deg, rgba(244, 249, 255, 0.95) 0%, rgba(232, 240, 250, 0.92) 100%);
+}
+
+.zt-application-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+}
+
+.zt-application-shell {
+  padding: 72px 16px 24px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.zt-application-hero {
+  width: 100%;
+  border-radius: 28px;
+  display: block;
+  object-fit: cover;
+  max-height: 340px;
+  margin-bottom: 18px;
+  box-shadow: 0 18px 40px rgba(24, 55, 96, 0.1);
+}
+
+.zt-application-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.zt-application-head p {
+  margin: 0 0 6px;
+  color: var(--zt-muted);
+}
+
+.zt-application-head h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: var(--zt-ink);
+}
+
+.zt-application-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--zt-muted);
+}
+
+.zt-application-step-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0 18px;
+}
+
+.zt-application-step-head h2,
+.zt-application-step-head p {
+  margin: 0;
+}
+
+.zt-application-step-head p {
+  color: var(--zt-muted);
+}
+
+.zt-application-step-index {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  background: linear-gradient(135deg, #22c55e 0%, #0ea5e9 100%);
+}
+
+.zt-application-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.zt-application-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.zt-application-panel,
+.zt-application-upload,
+.zt-application-vehicle,
+.zt-application-field {
+  background: #f9fbff;
+  border: 1px solid #d9e2ec;
+  border-radius: 18px;
+}
+
+.zt-application-panel,
+.zt-application-upload,
+.zt-application-vehicle {
+  padding: 18px;
+}
+
+.zt-application-panel p,
+.zt-application-panel li,
+.zt-application-upload p,
+.zt-application-vehicle span {
+  color: var(--zt-muted);
+}
+
+.zt-application-vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.zt-application-vehicle {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.zt-application-vehicle strong {
+  color: var(--zt-ink);
+  font-size: 1rem;
+}
+
+.zt-application-vehicle.is-selected {
+  border-color: var(--zt-blue);
+  box-shadow: 0 0 0 2px rgba(42, 102, 181, 0.15);
+}
+
+.zt-application-field {
+  --background: #f9fbff;
+  --border-radius: 18px;
+  --padding-start: 14px;
+  --inner-padding-end: 14px;
+}
+
+.zt-application-field--full {
+  grid-column: 1 / -1;
+}
+
+.zt-application-platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.zt-application-check {
+  --background: transparent;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  border-radius: 14px;
+}
+
+.zt-application-label {
+  display: block;
+  color: var(--zt-ink);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.zt-application-file-input {
+  display: none;
+}
+
+.zt-application-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.zt-application-doc-list {
+  margin-top: 10px;
+  background: transparent;
+}
+
+.zt-application-summary {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--zt-ink);
+}
+
+.zt-application-message,
+.zt-application-error {
+  margin: 16px 0 0;
+}
+
+.zt-application-message {
+  color: #15803d;
+}
+
+.zt-application-error {
+  color: #b91c1c;
+}
+
+.zt-application-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+@media (max-width: 767px) {
+  .zt-application-shell {
+    padding: 72px 12px 18px;
+  }
+
+  .zt-application-head,
+  .zt-application-meta,
+  .zt-application-actions,
+  .zt-application-grid,
+  .zt-application-vehicle-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .zt-application-actions ion-button {
+    width: 100%;
+  }
+}

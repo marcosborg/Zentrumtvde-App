@@ -1,0 +1,33 @@
+.zt-toolbar {
+  --background: rgba(247, 250, 255, 0.88);
+  --border-color: rgba(42, 102, 181, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.zt-toolbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.zt-toolbar-logo {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+.zt-shell-content {
+  --background: linear-gradient(180deg, #eef5ff 0%, #f8fafc 18%, #f3f7fb 100%);
+}
+
+.zt-shell-body {
+  padding-top: calc(72px + env(safe-area-inset-top));
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 992px) {
+  .zt-shell-body {
+    padding-top: 88px;
+    padding-bottom: 32px;
+  }
+}

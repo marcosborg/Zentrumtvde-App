@@ -1,2 +1,118 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+:root {
+  --ion-font-family: "Segoe UI", "Aptos", "Helvetica Neue", sans-serif;
+
+  --ion-color-primary: #2a66b5;
+  --ion-color-primary-rgb: 42, 102, 181;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #255aa0;
+  --ion-color-primary-tint: #4276bd;
+
+  --ion-color-success: #2dc38a;
+  --ion-color-success-rgb: 45, 195, 138;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #28ac79;
+  --ion-color-success-tint: #42c994;
+
+  --ion-color-light: #f7fbff;
+  --ion-color-light-rgb: 247, 251, 255;
+  --ion-color-light-contrast: #183760;
+  --ion-color-light-contrast-rgb: 24, 55, 96;
+  --ion-color-light-shade: #d9dde0;
+  --ion-color-light-tint: #f8fbff;
+
+  --ion-background-color: #f4f8fc;
+  --ion-background-color-rgb: 244, 248, 252;
+  --ion-text-color: #102038;
+  --ion-text-color-rgb: 16, 32, 56;
+  --ion-toolbar-background: rgba(247, 250, 255, 0.94);
+  --ion-toolbar-color: #102038;
+  --ion-tab-bar-background: rgba(255, 255, 255, 0.95);
+  --ion-tab-bar-color: #6b7a90;
+  --ion-tab-bar-color-selected: #2a66b5;
+
+  --zt-blue: #2a66b5;
+  --zt-blue-deep: #1f5aa3;
+  --zt-sky: #46a9fd;
+  --zt-green: #2dc38a;
+  --zt-ink: #102038;
+  --zt-muted: #5b697d;
+  --zt-surface: #ffffff;
+  --zt-service-purple: #625de3;
+  --zt-service-orange: #e97e3c;
+  --zt-service-red: #d9534f;
+}
+
+ion-menu.zt-menu {
+  --width: 320px;
+  --background: linear-gradient(180deg, #f7fbff 0%, #edf5ff 100%);
+}
+
+.zt-menu__header {
+  padding: calc(24px + env(safe-area-inset-top)) 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.zt-menu__header h2 {
+  margin: 0;
+  color: var(--zt-ink);
+}
+
+.zt-menu__logo {
+  width: 142px;
+  height: auto;
+}
+
+.zt-menu__list {
+  --background: transparent;
+}
+
+.zt-menu__list ion-item {
+  --background: rgba(255, 255, 255, 0.76);
+  --border-radius: 18px;
+  --padding-start: 14px;
+  margin-bottom: 10px;
+}
+
+.zt-menu__group {
+  margin-bottom: 14px;
+}
+
+.zt-menu__group-title {
+  --background: transparent !important;
+  --inner-padding-end: 0;
+  margin-bottom: 6px;
+}
+
+.zt-menu__child {
+  --padding-start: 42px !important;
+  margin-bottom: 8px;
+}
+
+.zt-menu__list h3 {
+  font-weight: 700;
+  color: var(--zt-ink);
+}
+
+.zt-menu__list p {
+  color: var(--zt-muted);
+}
+
+.zt-menu__footer {
+  margin: 20px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 18px;
+  color: var(--zt-blue-deep);
+  background: rgba(42, 102, 181, 0.08);
+}
+
+.zt-tabbar {
+  border-top: 1px solid rgba(42, 102, 181, 0.1);
+  backdrop-filter: blur(18px);
+}
