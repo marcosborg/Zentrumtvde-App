@@ -11,7 +11,8 @@ import {
 } from '@ionic/react';
 import { lockClosed } from 'ionicons/icons';
 import type { PropsWithChildren } from 'react';
-import { adminLoginUrl } from '../lib/frontpage-api';
+import { useHistory } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import WebsiteChatWidget from './WebsiteChatWidget';
 import './AppShell.css';
 
@@ -21,6 +22,9 @@ type AppShellProps = PropsWithChildren<{
 }>;
 
 const AppShell: React.FC<AppShellProps> = ({ title, subtitle, children }) => {
+  const history = useHistory();
+  const { isAuthenticated } = useAuth();
+
   return (
     <IonPage>
       <IonHeader translucent>
@@ -34,7 +38,10 @@ const AppShell: React.FC<AppShellProps> = ({ title, subtitle, children }) => {
             </span>
           </IonTitle>
           <IonButtons slot="end">
-            <IonButton fill="clear" href={adminLoginUrl} target="_blank">
+            <IonButton
+              fill="clear"
+              onClick={() => history.push(isAuthenticated ? '/reserved' : '/auth/login')}
+            >
               <IonIcon icon={lockClosed} />
             </IonButton>
           </IonButtons>

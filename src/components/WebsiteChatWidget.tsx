@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 import {
   IonButton,
   IonIcon,
@@ -5,7 +7,7 @@ import {
   IonTextarea,
 } from '@ionic/react';
 import { chatbubblesOutline, closeOutline, paperPlaneOutline } from 'ionicons/icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   sendWebsiteChatMessage,
   startWebsiteChat,
@@ -24,6 +26,7 @@ const WebsiteChatWidget: React.FC = () => {
   const [sessionToken, setSessionToken] = useState('');
   const [messages, setMessages] = useState<WebsiteChatMessage[]>([]);
   const [draft, setDraft] = useState('');
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const messagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -74,6 +77,32 @@ const WebsiteChatWidget: React.FC = () => {
     }
   }, [messages, open]);
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return undefined;
+    }
+
+    const willShow = Keyboard.addListener('keyboardWillShow', (info) => {
+      setKeyboardOffset(info.keyboardHeight);
+    });
+    const didShow = Keyboard.addListener('keyboardDidShow', (info) => {
+      setKeyboardOffset(info.keyboardHeight);
+    });
+    const willHide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardOffset(0);
+    });
+    const didHide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardOffset(0);
+    });
+
+    return () => {
+      void willShow.then((listener) => listener.remove());
+      void didShow.then((listener) => listener.remove());
+      void willHide.then((listener) => listener.remove());
+      void didHide.then((listener) => listener.remove());
+    };
+  }, []);
+
   const canSend = useMemo(
     () => enabled && !sending && sessionToken.trim() !== '' && draft.trim() !== '',
     [draft, enabled, sending, sessionToken],
@@ -123,7 +152,10 @@ const WebsiteChatWidget: React.FC = () => {
   }
 
   return (
-    <div className="zt-chat-widget">
+    <div
+      className="zt-chat-widget"
+      style={{ '--zt-keyboard-offset': `${keyboardOffset}px` } as CSSProperties}
+    >
       {open ? (
         <div className="zt-chat-widget__panel" aria-live="polite">
           <div className="zt-chat-widget__header">
@@ -183,7 +215,7 @@ const WebsiteChatWidget: React.FC = () => {
 
       <button
         type="button"
-        className="zt-chat-widget__toggle"
+        className={`zt-chat-widget__toggle ${open ? 'is-open' : ''}`}
         onClick={() => setOpen((current) => !current)}
         aria-label="Abrir chat"
       >

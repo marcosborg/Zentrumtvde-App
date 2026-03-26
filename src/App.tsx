@@ -15,6 +15,7 @@ import {
   setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import type { PropsWithChildren } from 'react';
 import { Redirect, Route } from 'react-router-dom';
 import {
   call,
@@ -39,7 +40,10 @@ import CandidateApplicationPage from './pages/CandidateApplication';
 import CmsPage from './pages/CmsPage';
 import Fleet from './pages/Fleet';
 import Home from './pages/Home';
+import ReservedArea from './pages/ReservedArea';
+import ReservedLogin from './pages/ReservedLogin';
 import Services from './pages/Services';
+import AuthProvider, { useAuth } from './context/AuthContext';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -144,6 +148,20 @@ const TabsLayout: React.FC = () => {
   );
 };
 
+const ProtectedRoute: React.FC<PropsWithChildren<{ path: string; exact?: boolean }>> = ({
+  children,
+  ...rest
+}) => {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Route
+      {...rest}
+      render={() => (isAuthenticated ? children : <Redirect to="/auth/login" />)}
+    />
+  );
+};
+
 const AppFrame: React.FC = () => {
   const { data } = useFrontpageData();
 
@@ -218,6 +236,12 @@ const AppFrame: React.FC = () => {
           </IonMenu>
 
           <IonRouterOutlet id="main-content">
+            <Route exact path="/auth/login">
+              <ReservedLogin />
+            </Route>
+            <ProtectedRoute exact path="/reserved">
+              <ReservedArea />
+            </ProtectedRoute>
             <Route path="/tabs">
               <TabsLayout />
             </Route>
@@ -235,9 +259,11 @@ const AppFrame: React.FC = () => {
 };
 
 const App: React.FC = () => (
-  <FrontpageDataProvider>
-    <AppFrame />
-  </FrontpageDataProvider>
+  <AuthProvider>
+    <FrontpageDataProvider>
+      <AppFrame />
+    </FrontpageDataProvider>
+  </AuthProvider>
 );
 
 export default App;

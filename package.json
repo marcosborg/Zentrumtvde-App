@@ -11,7 +11,9 @@
     "test.unit": "vitest",
     "lint": "eslint",
     "ionic:build": "npm run build",
-    "ionic:serve": "npm run dev -- --open"
+    "ionic:serve": "npm run dev -- --open",
+    "android:sync": "npx cap sync android",
+    "android:run": "npx cap run android"
   },
   "dependencies": {
     "@capacitor/android": "8.2.0",
