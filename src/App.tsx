@@ -40,6 +40,7 @@ import CandidateApplicationPage from './pages/CandidateApplication';
 import CmsPage from './pages/CmsPage';
 import Fleet from './pages/Fleet';
 import Home from './pages/Home';
+import IncomingCallBridge from './components/IncomingCallBridge';
 import PushNotificationBridge from './components/PushNotificationBridge';
 import ReservedArea from './pages/ReservedArea';
 import ReservedLogin from './pages/ReservedLogin';
@@ -186,6 +187,7 @@ const AppFrame: React.FC = () => {
   return (
     <IonApp>
       <IonReactRouter>
+        <IncomingCallBridge />
         <PushNotificationBridge />
         <IonSplitPane contentId="main-content" when="lg">
           <IonMenu contentId="main-content" type="overlay" className="zt-menu">

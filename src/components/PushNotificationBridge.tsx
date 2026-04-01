@@ -1,3 +1,7 @@
+import {
+  LocalNotifications,
+  type LocalNotificationActionPerformed,
+} from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
@@ -51,6 +55,15 @@ const PushNotificationBridge: React.FC = () => {
         visibility: 1,
       }).catch(() => undefined);
 
+      const localPermissionStatus = await LocalNotifications.checkPermissions();
+      const localPermission = localPermissionStatus.display === 'prompt'
+        ? await LocalNotifications.requestPermissions()
+        : localPermissionStatus;
+
+      if (localPermission.display !== 'granted') {
+        return;
+      }
+
       const savedToken = getStoredPushToken();
 
       if (token && savedToken) {
@@ -78,8 +91,40 @@ const PushNotificationBridge: React.FC = () => {
       void registerCurrentToken(value);
     });
 
+    const receivedListener = PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      const route = extractTaskRouteFromPushPayload(notification);
+      const notificationId = Date.now() % 2147483647;
+      const title = notification.title?.trim() || 'Novo contacto';
+      const body = notification.body?.trim()
+        || [notification.data?.contact_name, notification.data?.phone].filter(Boolean).join(' · ')
+        || 'Toque para abrir a task.';
+
+      void LocalNotifications.schedule({
+        notifications: [
+          {
+            id: notificationId,
+            title,
+            body,
+            channelId: 'new-contacts',
+            extra: route ? { route } : undefined,
+            smallIcon: 'ic_launcher_foreground',
+          },
+        ],
+      }).catch(() => undefined);
+    });
+
     const actionListener = PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
       const route = extractTaskRouteFromPushPayload(event);
+
+      if (route) {
+        history.push(route);
+      }
+    });
+
+    const localActionListener = LocalNotifications.addListener('localNotificationActionPerformed', (event: LocalNotificationActionPerformed) => {
+      const route = typeof event.notification.extra?.route === 'string'
+        ? event.notification.extra.route
+        : null;
 
       if (route) {
         history.push(route);
@@ -90,8 +135,10 @@ const PushNotificationBridge: React.FC = () => {
 
     return () => {
       cancelled = true;
-      void registrationListener.then((listener) => listener.remove());
-      void actionListener.then((listener) => listener.remove());
+      void registrationListener.then((listener: { remove: () => Promise<void> }) => listener.remove());
+      void receivedListener.then((listener: { remove: () => Promise<void> }) => listener.remove());
+      void actionListener.then((listener: { remove: () => Promise<void> }) => listener.remove());
+      void localActionListener.then((listener: { remove: () => Promise<void> }) => listener.remove());
     };
   }, [history, token]);
 

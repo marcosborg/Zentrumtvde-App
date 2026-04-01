@@ -6,6 +6,11 @@ const config: CapacitorConfig = {
   appId: 'com.zentrumtvde.app',
   appName: 'Zentrum TVDE',
   webDir: 'dist',
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
   ...(liveReloadUrl
     ? {
         server: {

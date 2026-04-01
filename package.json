@@ -20,6 +20,7 @@
     "@capacitor/app": "latest",
     "@capacitor/camera": "^8.0.1",
     "@capacitor/core": "latest",
+    "@capacitor/local-notifications": "^8.0.0",
     "@capacitor/push-notifications": "^8.0.0",
     "@capacitor/haptics": "latest",
     "@capacitor/keyboard": "latest",

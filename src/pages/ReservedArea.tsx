@@ -25,6 +25,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/react';
+import { App as CapacitorApp } from '@capacitor/app';
 import {
   apps,
   call,
@@ -57,6 +58,8 @@ import {
 import type { KanbanBoardPayload, KanbanTaskDetail, KanbanTaskSummary } from '../types/kanban';
 import type { ReservedOverviewPayload } from '../types/reserved';
 import './ReservedArea.css';
+
+const PENDING_CALL_TASK_STORAGE_KEY = 'reserved_pending_call_task_id';
 
 const ReservedArea: React.FC = () => {
   const history = useHistory();
@@ -94,6 +97,20 @@ const ReservedArea: React.FC = () => {
   const [newContactEmail, setNewContactEmail] = useState('');
   const [createContactError, setCreateContactError] = useState('');
   const [isCreatingContact, setIsCreatingContact] = useState(false);
+
+  const consumePendingCallTaskId = (): number | null => {
+    const rawValue = window.localStorage.getItem(PENDING_CALL_TASK_STORAGE_KEY);
+
+    if (!rawValue) {
+      return null;
+    }
+
+    window.localStorage.removeItem(PENDING_CALL_TASK_STORAGE_KEY);
+
+    const taskId = Number(rawValue);
+
+    return Number.isFinite(taskId) && taskId > 0 ? taskId : null;
+  };
 
   const loadBoard = async (boardId?: number) => {
     if (!token) {
@@ -189,6 +206,32 @@ const ReservedArea: React.FC = () => {
     });
   }, [history, location.pathname, location.search, token]);
 
+  useEffect(() => {
+    const listenerPromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive || !token) {
+        return;
+      }
+
+      const pendingTaskId = consumePendingCallTaskId();
+
+      if (!pendingTaskId) {
+        return;
+      }
+
+      if (activeTask?.id === pendingTaskId && isTaskModalOpen) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        void openTask(pendingTaskId);
+      }, 300);
+    });
+
+    return () => {
+      void listenerPromise.then((listener) => listener.remove());
+    };
+  }, [activeTask?.id, isTaskModalOpen, token]);
+
   const openTask = async (taskId: number) => {
     if (!token) {
       return;
@@ -222,6 +265,15 @@ const ReservedArea: React.FC = () => {
     setAvailableStages([]);
     setRestoreStages([]);
     setRestoreStageId(null);
+  };
+
+  const handleCallTask = () => {
+    if (!activeTask?.phone) {
+      return;
+    }
+
+    window.localStorage.setItem(PENDING_CALL_TASK_STORAGE_KEY, String(activeTask.id));
+    window.location.href = `tel:${activeTask.phone}`;
   };
 
   const openCreateContactModal = () => {
@@ -1067,7 +1119,7 @@ const ReservedArea: React.FC = () => {
                         </>
                       ) : (
                         <div className="zt-task-cta-row">
-                          <IonButton expand="block" href={activeTask.phone ? `tel:${activeTask.phone}` : undefined} disabled={!activeTask.phone}>
+                          <IonButton expand="block" onClick={handleCallTask} disabled={!activeTask.phone}>
                             <IonIcon icon={call} slot="start" />
                             Ligar
                           </IonButton>
