@@ -152,12 +152,18 @@ const ProtectedRoute: React.FC<PropsWithChildren<{ path: string; exact?: boolean
   children,
   ...rest
 }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isReady } = useAuth();
 
   return (
     <Route
       {...rest}
-      render={() => (isAuthenticated ? children : <Redirect to="/auth/login" />)}
+      render={() => {
+        if (!isReady) {
+          return null;
+        }
+
+        return isAuthenticated ? children : <Redirect to="/auth/login" />;
+      }}
     />
   );
 };

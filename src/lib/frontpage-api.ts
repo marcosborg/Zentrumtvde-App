@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import type { CandidateApplicationBootstrap, CandidateApplicationRecord } from '../types/candidate';
 import type { FrontpagePayload } from '../types/frontpage';
+import type { KanbanBoardPayload, KanbanTaskPayload } from '../types/kanban';
 
 const PRODUCTION_API_BASE_URL = 'https://zentrum-tvde.com';
 const LOCAL_API_BASE_URL = 'http://127.0.0.1:8000';
@@ -24,12 +25,15 @@ const apiBaseUrl = resolveApiBaseUrl();
 export const frontpageEndpoint = `${apiBaseUrl}/app/frontpage`;
 export const contactEndpoint = `${apiBaseUrl}/app/contact`;
 export const adminLoginUrl = `${apiBaseUrl}/admin/login`;
+export const appLoginEndpoint = `${apiBaseUrl}/app/auth/login`;
+export const appLogoutEndpoint = `${apiBaseUrl}/app/auth/logout`;
 export const candidateApplicationEndpoint = `${apiBaseUrl}/app/candidatura`;
 export const candidateApplicationSaveEndpoint = `${apiBaseUrl}/app/candidatura/save`;
 export const candidateApplicationSubmitEndpoint = `${apiBaseUrl}/app/candidatura/submit`;
 export const candidateApplicationUploadEndpoint = `${apiBaseUrl}/app/candidatura/upload`;
 export const chatSessionEndpoint = `${apiBaseUrl}/app/chat/session`;
 export const chatMessageEndpoint = `${apiBaseUrl}/app/chat/message`;
+export const kanbanEndpoint = `${apiBaseUrl}/app/kanban`;
 
 export type ContactFormPayload = {
   name: string;
@@ -95,6 +99,20 @@ export type WebsiteChatReply = {
   assistant_message: WebsiteChatMessage;
 };
 
+export type AppAuthUser = {
+  id: number;
+  name: string;
+  email: string;
+};
+
+export type AppLoginResponse = {
+  authenticated: boolean;
+  token: string;
+  user: AppAuthUser;
+  message?: string;
+  errors?: Record<string, string[]>;
+};
+
 export async function fetchFrontpage(): Promise<FrontpagePayload> {
   const response = await fetch(frontpageEndpoint, {
     method: 'GET',
@@ -133,6 +151,120 @@ export async function submitContactForm(
   }
 
   return data ?? { message: 'Pedido enviado com sucesso.' };
+}
+
+export async function loginReservedArea(email: string, password: string): Promise<AppLoginResponse> {
+  const response = await fetch(appLoginEndpoint, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as AppLoginResponse | null;
+
+  if (!response.ok || !data) {
+    throw data ?? new Error('Nao foi possivel validar o acesso.');
+  }
+
+  return data;
+}
+
+async function authFetch(input: RequestInfo | URL, token: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers ?? {});
+  headers.set('Accept', 'application/json');
+  headers.set('Authorization', `Bearer ${token}`);
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
+}
+
+export async function logoutReservedArea(token: string): Promise<void> {
+  await authFetch(appLogoutEndpoint, token, {
+    method: 'POST',
+  }).catch(() => undefined);
+}
+
+export async function fetchKanbanBoard(token: string, boardId?: number): Promise<KanbanBoardPayload> {
+  const url = boardId ? `${kanbanEndpoint}?board_id=${boardId}` : kanbanEndpoint;
+  const response = await authFetch(url, token, {
+    method: 'GET',
+  });
+
+  const data = (await response.json().catch(() => null)) as KanbanBoardPayload | { message?: string } | null;
+
+  if (!response.ok || !data || !('stages' in data)) {
+    throw new Error((data && 'message' in data && data.message) || 'Nao foi possivel carregar o kanban.');
+  }
+
+  return data;
+}
+
+export async function fetchKanbanTask(token: string, taskId: number): Promise<KanbanTaskPayload> {
+  const response = await authFetch(`${kanbanEndpoint}/tasks/${taskId}`, token, {
+    method: 'GET',
+  });
+
+  const data = (await response.json().catch(() => null)) as KanbanTaskPayload | { message?: string } | null;
+
+  if (!response.ok || !data || !('task' in data)) {
+    throw new Error((data && 'message' in data && data.message) || 'Nao foi possivel carregar a tarefa.');
+  }
+
+  return data;
+}
+
+export async function addKanbanTaskComment(
+  token: string,
+  taskId: number,
+  body: string,
+  isInternal = true,
+): Promise<KanbanTaskPayload> {
+  const response = await authFetch(`${kanbanEndpoint}/tasks/${taskId}/comments`, token, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      body,
+      is_internal: isInternal,
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as KanbanTaskPayload | { message?: string; errors?: Record<string, string[]> } | null;
+
+  if (!response.ok || !data || !('task' in data)) {
+    throw data ?? new Error('Nao foi possivel guardar a observacao.');
+  }
+
+  return data;
+}
+
+export async function moveKanbanTask(token: string, taskId: number, stageId: number): Promise<KanbanTaskPayload> {
+  const response = await authFetch(`${kanbanEndpoint}/tasks/${taskId}/move`, token, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      stage_id: stageId,
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as KanbanTaskPayload | { message?: string; errors?: Record<string, string[]> } | null;
+
+  if (!response.ok || !data || !('task' in data)) {
+    throw data ?? new Error('Nao foi possivel mover a tarefa.');
+  }
+
+  return data;
 }
 
 export async function fetchCandidateApplication(token?: string): Promise<CandidateApplicationBootstrap> {

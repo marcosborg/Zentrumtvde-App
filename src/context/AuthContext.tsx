@@ -5,10 +5,19 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
+import {
+  loginReservedArea,
+  logoutReservedArea,
+  type AppAuthUser,
+  type AppLoginResponse,
+} from '../lib/frontpage-api';
 
 type AuthContextValue = {
+  isReady: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
+  user: AppAuthUser | null;
+  token: string | null;
+  login: (email: string, password: string) => Promise<AppLoginResponse>;
   logout: () => void;
 };
 
@@ -17,33 +26,62 @@ const storageKey = 'zentrum_reserved_auth';
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
+  const [isReady, setIsReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<AppAuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsAuthenticated(window.localStorage.getItem(storageKey) === '1');
-  }, []);
+    const storedValue = window.localStorage.getItem(storageKey);
 
-  const login = (email: string, password: string) => {
-    const allowed = email.trim() !== '' && password.trim() !== '';
-
-    if (allowed) {
-      window.localStorage.setItem(storageKey, '1');
-      setIsAuthenticated(true);
+    if (!storedValue) {
+      setIsReady(true);
+      return;
     }
 
-    return allowed;
+    try {
+      const storedAuth = JSON.parse(storedValue) as { user?: AppAuthUser; token?: string } | null;
+
+      if (storedAuth?.user && storedAuth?.token) {
+        setUser(storedAuth.user);
+        setToken(storedAuth.token);
+        setIsAuthenticated(true);
+      } else {
+        window.localStorage.removeItem(storageKey);
+      }
+    } catch {
+      window.localStorage.removeItem(storageKey);
+    }
+
+    setIsReady(true);
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const response = await loginReservedArea(email.trim(), password);
+
+    window.localStorage.setItem(storageKey, JSON.stringify({
+      token: response.token,
+      user: response.user,
+    }));
+    setToken(response.token);
+    setUser(response.user);
+    setIsAuthenticated(true);
+
+    return response;
   };
 
   const logout = () => {
+    if (token) {
+      void logoutReservedArea(token);
+    }
+
     window.localStorage.removeItem(storageKey);
+    setToken(null);
+    setUser(null);
     setIsAuthenticated(false);
   };
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ isReady, isAuthenticated, user, token, login, logout }}>{children}</AuthContext.Provider>;
 };
 
 export function useAuth(): AuthContextValue {

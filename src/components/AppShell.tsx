@@ -11,7 +11,7 @@ import {
 } from '@ionic/react';
 import { lockClosed } from 'ionicons/icons';
 import type { PropsWithChildren } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import WebsiteChatWidget from './WebsiteChatWidget';
 import './AppShell.css';
@@ -23,6 +23,7 @@ type AppShellProps = PropsWithChildren<{
 
 const AppShell: React.FC<AppShellProps> = ({ title, subtitle, children }) => {
   const history = useHistory();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
 
   return (
@@ -40,7 +41,11 @@ const AppShell: React.FC<AppShellProps> = ({ title, subtitle, children }) => {
           <IonButtons slot="end">
             <IonButton
               fill="clear"
-              onClick={() => history.push(isAuthenticated ? '/reserved' : '/auth/login')}
+              onClick={() =>
+                history.push(isAuthenticated ? '/reserved' : '/auth/login', {
+                  returnTo: location.pathname,
+                })
+              }
             >
               <IonIcon icon={lockClosed} />
             </IonButton>
