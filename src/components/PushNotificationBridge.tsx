@@ -18,6 +18,8 @@ import {
   setStoredPushToken,
 } from '../lib/push-notifications';
 
+const PUSH_CHANNEL_ID = 'new-contacts-alerts';
+
 const PushNotificationBridge: React.FC = () => {
   const history = useHistory();
   const { token } = useAuth();
@@ -47,7 +49,7 @@ const PushNotificationBridge: React.FC = () => {
 
     const setupPush = async (): Promise<void> => {
       await PushNotifications.createChannel({
-        id: 'new-contacts',
+        id: PUSH_CHANNEL_ID,
         name: 'Novos contactos',
         description: 'Alertas de novos contactos e tasks urgentes.',
         importance: 5,
@@ -105,7 +107,7 @@ const PushNotificationBridge: React.FC = () => {
             id: notificationId,
             title,
             body,
-            channelId: 'new-contacts',
+            channelId: PUSH_CHANNEL_ID,
             extra: route ? { route } : undefined,
             smallIcon: 'ic_launcher_foreground',
           },
