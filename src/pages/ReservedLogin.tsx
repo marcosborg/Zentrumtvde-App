@@ -94,19 +94,21 @@ const ReservedLogin: React.FC = () => {
                 </IonItem>
                 <IonItem className="zt-reserved-field">
                   <IonLabel position="stacked">Password</IonLabel>
-                  <IonInput
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onIonInput={(event) => setPassword(event.detail.value ?? '')}
-                  />
-                  <button
-                    type="button"
-                    className="zt-password-toggle"
-                    onClick={() => setShowPassword((current) => !current)}
-                    aria-label={showPassword ? 'Esconder password' : 'Mostrar password'}
-                  >
-                    <IonIcon icon={showPassword ? eyeOff : eye} />
-                  </button>
+                  <div className="zt-password-row">
+                    <IonInput
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onIonInput={(event) => setPassword(event.detail.value ?? '')}
+                    />
+                    <button
+                      type="button"
+                      className="zt-password-toggle"
+                      onClick={() => setShowPassword((current) => !current)}
+                      aria-label={showPassword ? 'Esconder password' : 'Mostrar password'}
+                    >
+                      <IonIcon icon={showPassword ? eyeOff : eye} />
+                    </button>
+                  </div>
                 </IonItem>
 
                 {error ? (

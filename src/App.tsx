@@ -40,6 +40,7 @@ import CandidateApplicationPage from './pages/CandidateApplication';
 import CmsPage from './pages/CmsPage';
 import Fleet from './pages/Fleet';
 import Home from './pages/Home';
+import PushNotificationBridge from './components/PushNotificationBridge';
 import ReservedArea from './pages/ReservedArea';
 import ReservedLogin from './pages/ReservedLogin';
 import Services from './pages/Services';
@@ -185,6 +186,7 @@ const AppFrame: React.FC = () => {
   return (
     <IonApp>
       <IonReactRouter>
+        <PushNotificationBridge />
         <IonSplitPane contentId="main-content" when="lg">
           <IonMenu contentId="main-content" type="overlay" className="zt-menu">
             <IonContent>
@@ -245,7 +247,7 @@ const AppFrame: React.FC = () => {
             <Route exact path="/auth/login">
               <ReservedLogin />
             </Route>
-            <ProtectedRoute exact path="/reserved">
+            <ProtectedRoute path="/reserved">
               <ReservedArea />
             </ProtectedRoute>
             <Route path="/tabs">

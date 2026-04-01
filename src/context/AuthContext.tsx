@@ -8,9 +8,11 @@ import {
 import {
   loginReservedArea,
   logoutReservedArea,
+  unregisterAppDevice,
   type AppAuthUser,
   type AppLoginResponse,
 } from '../lib/frontpage-api';
+import { clearStoredPushToken, getStoredPushToken, isAndroidPushSupported } from '../lib/push-notifications';
 
 type AuthContextValue = {
   isReady: boolean;
@@ -72,6 +74,13 @@ const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   const logout = () => {
     if (token) {
+      const pushToken = getStoredPushToken();
+
+      if (pushToken && isAndroidPushSupported()) {
+        void unregisterAppDevice(token, pushToken).catch(() => undefined);
+        clearStoredPushToken();
+      }
+
       void logoutReservedArea(token);
     }
 

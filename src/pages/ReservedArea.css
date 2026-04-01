@@ -68,6 +68,12 @@
   gap: 14px;
 }
 
+.zt-inline-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .zt-reserved-field {
   --background: #f9fbff;
   --border-radius: 18px;
@@ -75,6 +81,18 @@
   --inner-padding-end: 14px;
   border: 1px solid rgba(42, 102, 181, 0.12);
   border-radius: 18px;
+}
+
+.zt-password-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zt-password-row ion-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .zt-password-toggle {
@@ -87,8 +105,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: flex-end;
-  margin-bottom: 10px;
+  flex: 0 0 36px;
+  align-self: center;
+  margin: 0;
 }
 
 .zt-password-toggle ion-icon {
@@ -119,32 +138,35 @@
 }
 
 .zt-ops-shell {
-  padding: calc(84px + env(safe-area-inset-top)) 16px 120px;
+  padding: calc(16px + env(safe-area-inset-top)) 16px 120px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.zt-ops-topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
+.zt-ops-shell--tabs {
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
 }
 
-.zt-ops-logo {
-  width: 158px;
+.zt-reserved-toolbar {
+  --padding-start: 14px;
+  --padding-end: 10px;
+  --min-height: 72px;
+}
+
+.zt-reserved-toolbar__brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.zt-reserved-toolbar__logo {
+  width: 136px;
   height: auto;
   display: block;
-  margin-bottom: 8px;
 }
 
-.zt-ops-subtitle {
-  margin: 0;
-  color: var(--zt-muted);
-}
-
-.zt-ops-actions {
+.zt-reserved-toolbar__actions {
   display: flex;
   align-items: center;
 }
@@ -153,21 +175,16 @@
   margin: 0;
 }
 
-.zt-ops-user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+.zt-reserved-tabbar {
+  --background: rgba(247, 251, 255, 0.96);
+  border-top: 1px solid rgba(42, 102, 181, 0.12);
+  backdrop-filter: blur(14px);
 }
 
-.zt-ops-user ion-icon {
-  font-size: 2rem;
-  color: var(--zt-blue);
-}
-
-.zt-ops-user p {
-  margin: 4px 0 0;
+.zt-ops-helper-text {
+  margin: 8px 0 16px;
   color: var(--zt-muted);
+  line-height: 1.45;
 }
 
 .zt-ops-loading {
@@ -221,6 +238,7 @@
 }
 
 .zt-task-card,
+.zt-record-card,
 .zt-task-empty,
 .zt-task-detail-card {
   margin: 0;
@@ -236,6 +254,13 @@
 .zt-task-topline strong {
   color: var(--zt-ink);
   line-height: 1.25;
+}
+
+.zt-task-chip-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .zt-priority-chip {
@@ -265,10 +290,62 @@
   --color: #157347;
 }
 
+.zt-status-chip {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.zt-status-chip--submitted,
+.zt-status-chip--success,
+.zt-status-chip--available {
+  --background: rgba(45, 195, 138, 0.14);
+  --color: #157347;
+}
+
+.zt-status-chip--incomplete,
+.zt-status-chip--maintenance {
+  --background: rgba(233, 126, 60, 0.16);
+  --color: #b45309;
+}
+
+.zt-status-chip--converted,
+.zt-status-chip--allocated {
+  --background: rgba(42, 102, 181, 0.14);
+  --color: var(--zt-blue-deep);
+}
+
+.zt-status-chip--draft,
+.zt-status-chip--gray,
+.zt-status-chip--inactive {
+  --background: rgba(107, 114, 128, 0.14);
+  --color: #4b5563;
+}
+
+.zt-status-chip--accident {
+  --background: rgba(217, 83, 79, 0.16);
+  --color: #b3261e;
+}
+
 .zt-task-desc {
   margin: 10px 0 0;
   color: var(--zt-muted);
   white-space: pre-line;
+}
+
+.zt-record-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+  color: var(--zt-muted);
+  font-size: 0.9rem;
+}
+
+.zt-record-grid span {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border: 1px solid rgba(42, 102, 181, 0.08);
 }
 
 .zt-task-contact-row,
@@ -289,6 +366,26 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.zt-task-modal::part(content) {
+  background: linear-gradient(180deg, #eef5ff 0%, #f8fafc 35%, #edf4fb 100%);
+}
+
+.zt-task-modal ion-header {
+  position: relative;
+  z-index: 3;
+  background: #f7fbff;
+  box-shadow: 0 10px 22px rgba(16, 32, 56, 0.08);
+}
+
+.zt-task-modal .zt-toolbar {
+  --background: #f7fbff;
+  backdrop-filter: none;
+}
+
+.zt-create-contact-modal ion-content::part(background) {
+  background: linear-gradient(180deg, #eef5ff 0%, #f8fafc 35%, #edf4fb 100%);
 }
 
 .zt-task-detail-grid {
