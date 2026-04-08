@@ -691,9 +691,23 @@
   stroke-linecap: round;
 }
 
+.zt-inspection-map__cutline {
+  fill: none;
+  stroke: #8aa1c6;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
 .zt-inspection-map__accent-soft {
   fill: #c9d9f2;
   stroke: none;
+}
+
+.zt-inspection-map__accent-soft-line {
+  fill: none;
+  stroke: #b9cae7;
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 
 .zt-inspection-map__seat {

@@ -9,8 +9,9 @@ type SignaturePadProps = {
 const SignaturePad: React.FC<SignaturePadProps> = ({ label, value, onChange }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
+  const lastRenderedValueRef = useRef('');
 
-  const redraw = () => {
+  const redraw = (nextValue: string) => {
     const canvas = canvasRef.current;
 
     if (!canvas) {
@@ -35,27 +36,43 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ label, value, onChange }) =
     context.lineCap = 'round';
     context.strokeStyle = '#19325d';
 
-    if (!value) {
+    if (!nextValue) {
+      lastRenderedValueRef.current = '';
       return;
     }
 
     const image = new Image();
     image.onload = () => {
       context.drawImage(image, 0, 0, width, height);
+      lastRenderedValueRef.current = nextValue;
     };
-    image.src = value;
+    image.src = nextValue;
   };
 
   useEffect(() => {
-    redraw();
+    redraw(value);
 
-    const handleResize = () => redraw();
+    const handleResize = () => {
+      redraw(lastRenderedValueRef.current || value);
+    };
 
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
     };
+  }, []);
+
+  useEffect(() => {
+    if (drawingRef.current) {
+      return;
+    }
+
+    if (value === lastRenderedValueRef.current) {
+      return;
+    }
+
+    redraw(value);
   }, [value]);
 
   const relativePosition = (event: PointerEvent | React.PointerEvent<HTMLCanvasElement>) => {
@@ -111,6 +128,8 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ label, value, onChange }) =
     const canvas = canvasRef.current;
 
     drawingRef.current = false;
+    lastRenderedValueRef.current = canvas?.toDataURL('image/png') ?? '';
+    onChange(lastRenderedValueRef.current);
 
     if (canvas?.hasPointerCapture(event.pointerId)) {
       canvas.releasePointerCapture(event.pointerId);

@@ -48,13 +48,15 @@ function renderIllustration(view: string) {
   if (view === 'front') {
     return (
       <>
-        <path d="M95 30 C110 18, 132 12, 160 12 C188 12, 210 18, 225 30 L246 54 C252 62, 256 73, 256 86 L256 108 C256 121, 245 132, 232 132 L88 132 C75 132, 64 121, 64 108 L64 86 C64 73, 68 62, 74 54 Z" className="zt-inspection-map__car-shell" />
-        <path d="M108 34 C120 26, 137 22, 160 22 C183 22, 200 26, 212 34 L226 54 L94 54 Z" className="zt-inspection-map__glass" />
-        <path d="M88 78 Q108 70 126 78" className="zt-inspection-map__accent" />
-        <path d="M194 78 Q212 70 232 78" className="zt-inspection-map__accent" />
-        <rect x="128" y="88" width="64" height="14" rx="7" className="zt-inspection-map__accent-soft" />
-        <circle cx="102" cy="124" r="16" className="zt-inspection-map__wheel" />
-        <circle cx="218" cy="124" r="16" className="zt-inspection-map__wheel" />
+        <path d="M94 28 C110 16, 132 11, 160 11 C188 11, 210 16, 226 28 L244 48 C252 57, 257 69, 257 83 L257 108 C257 122, 245 134, 231 134 L89 134 C75 134, 63 122, 63 108 L63 83 C63 69, 68 57, 76 48 Z" className="zt-inspection-map__car-shell" />
+        <path d="M111 31 C123 24, 140 20, 160 20 C180 20, 197 24, 209 31 L220 52 L100 52 Z" className="zt-inspection-map__glass" />
+        <path d="M84 92 C96 80, 112 74, 126 73 C116 79, 106 86, 99 96" className="zt-inspection-map__accent" />
+        <path d="M236 92 C224 80, 208 74, 194 73 C204 79, 214 86, 221 96" className="zt-inspection-map__accent" />
+        <path d="M132 92 C144 88, 176 88, 188 92" className="zt-inspection-map__accent" />
+        <rect x="133" y="97" width="54" height="10" rx="5" className="zt-inspection-map__accent-soft" />
+        <path d="M96 112 H224" className="zt-inspection-map__cutline" />
+        <circle cx="101" cy="126" r="15" className="zt-inspection-map__wheel" />
+        <circle cx="219" cy="126" r="15" className="zt-inspection-map__wheel" />
       </>
     );
   }
@@ -62,13 +64,15 @@ function renderIllustration(view: string) {
   if (view === 'rear') {
     return (
       <>
-        <path d="M86 28 C104 16, 129 12, 160 12 C191 12, 216 16, 234 28 L248 46 C256 56, 260 69, 260 84 L260 106 C260 120, 248 132, 234 132 L86 132 C72 132, 60 120, 60 106 L60 84 C60 69, 64 56, 72 46 Z" className="zt-inspection-map__car-shell" />
-        <path d="M108 34 C122 28, 139 24, 160 24 C181 24, 198 28, 212 34 L222 50 L98 50 Z" className="zt-inspection-map__glass" />
-        <path d="M86 80 H128" className="zt-inspection-map__accent" />
-        <path d="M192 80 H234" className="zt-inspection-map__accent" />
-        <rect x="132" y="84" width="56" height="16" rx="8" className="zt-inspection-map__accent-soft" />
-        <circle cx="102" cy="124" r="16" className="zt-inspection-map__wheel" />
-        <circle cx="218" cy="124" r="16" className="zt-inspection-map__wheel" />
+        <path d="M85 26 C103 15, 129 11, 160 11 C191 11, 217 15, 235 26 L248 42 C257 53, 261 67, 261 83 L261 108 C261 122, 249 134, 235 134 L85 134 C71 134, 59 122, 59 108 L59 83 C59 67, 63 53, 72 42 Z" className="zt-inspection-map__car-shell" />
+        <path d="M108 30 C121 24, 139 21, 160 21 C181 21, 199 24, 212 30 L220 47 L100 47 Z" className="zt-inspection-map__glass" />
+        <path d="M88 81 Q118 70 145 74" className="zt-inspection-map__accent" />
+        <path d="M232 81 Q202 70 175 74" className="zt-inspection-map__accent" />
+        <path d="M98 88 C128 94, 192 94, 222 88" className="zt-inspection-map__accent" />
+        <rect x="134" y="95" width="52" height="10" rx="5" className="zt-inspection-map__accent-soft" />
+        <path d="M95 110 H225" className="zt-inspection-map__cutline" />
+        <circle cx="101" cy="126" r="15" className="zt-inspection-map__wheel" />
+        <circle cx="219" cy="126" r="15" className="zt-inspection-map__wheel" />
       </>
     );
   }
@@ -76,24 +80,29 @@ function renderIllustration(view: string) {
   if (view === 'interior') {
     return (
       <>
-        <rect x="86" y="14" width="148" height="132" rx="24" className="zt-inspection-map__car-shell" />
-        <rect x="100" y="24" width="120" height="24" rx="10" className="zt-inspection-map__dashboard" />
-        <rect x="98" y="56" width="56" height="46" rx="16" className="zt-inspection-map__seat" />
-        <rect x="166" y="56" width="56" height="46" rx="16" className="zt-inspection-map__seat" />
-        <rect x="116" y="112" width="88" height="18" rx="8" className="zt-inspection-map__dashboard" />
+        <rect x="86" y="14" width="148" height="132" rx="28" className="zt-inspection-map__car-shell" />
+        <path d="M102 24 H218 C221 24 224 27 224 30 V44 H96 V30 C96 27 99 24 102 24 Z" className="zt-inspection-map__dashboard" />
+        <path d="M99 56 C99 48 106 44 114 44 H144 C151 44 156 49 156 56 V95 C156 102 151 107 144 107 H113 C105 107 99 101 99 94 Z" className="zt-inspection-map__seat" />
+        <path d="M164 56 C164 48 171 44 179 44 H209 C216 44 221 49 221 56 V94 C221 101 215 107 208 107 H177 C170 107 164 102 164 95 Z" className="zt-inspection-map__seat" />
+        <rect x="114" y="114" width="92" height="16" rx="8" className="zt-inspection-map__dashboard" />
+        <path d="M160 44 V130" className="zt-inspection-map__cutline" />
       </>
     );
   }
 
   return (
     <>
-      <path d="M42 116 L50 100 C58 82, 74 64, 96 56 L136 40 C146 36, 154 34, 170 34 L206 34 C220 34, 232 38, 242 46 L266 64 C278 74, 288 90, 294 106 L300 116 L300 126 L30 126 Z" className="zt-inspection-map__car-shell" />
-      <path d="M120 42 H190 C206 42, 216 48, 226 58 L246 76 H96 L108 56 C112 48, 116 44, 120 42 Z" className="zt-inspection-map__glass" />
-      <path d="M142 44 Q158 28 176 28" className="zt-inspection-map__accent" />
-      <path d="M56 108 H92" className="zt-inspection-map__accent-soft" />
-      <path d="M232 108 H276" className="zt-inspection-map__accent-soft" />
+      <path d="M28 122 L38 104 C46 88 58 74 74 65 L109 46 C126 37 145 32 165 32 H200 C221 32 240 40 254 54 L274 74 C286 86 295 101 300 116 L302 122 V128 H28 Z" className="zt-inspection-map__car-shell" />
+      <path d="M112 44 H198 C214 44 227 49 237 60 L252 75 H90 L100 57 C103 50 106 46 112 44 Z" className="zt-inspection-map__glass" />
+      <path d="M130 44 C141 30 154 23 171 22 C185 22 198 26 207 36" className="zt-inspection-map__accent" />
+      <path d="M80 78 H258" className="zt-inspection-map__cutline" />
+      <path d="M50 104 H86" className="zt-inspection-map__accent" />
+      <path d="M238 104 H284" className="zt-inspection-map__accent" />
+      <path d="M104 112 H224" className="zt-inspection-map__cutline" />
       <circle cx="96" cy="126" r="18" className="zt-inspection-map__wheel" />
-      <circle cx="230" cy="126" r="18" className="zt-inspection-map__wheel" />
+      <circle cx="232" cy="126" r="18" className="zt-inspection-map__wheel" />
+      <path d="M84 128 Q96 111 108 128" className="zt-inspection-map__accent-soft-line" />
+      <path d="M220 128 Q232 111 244 128" className="zt-inspection-map__accent-soft-line" />
     </>
   );
 }
