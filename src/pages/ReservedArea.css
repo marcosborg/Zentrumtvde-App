@@ -468,3 +468,319 @@
     grid-column: auto;
   }
 }
+
+.zt-handover-card__header,
+.zt-handover-card__actions,
+.zt-handover-list__item,
+.zt-handover-section__header,
+.zt-signature-pad__header {
+  display: flex;
+  align-items: center;
+}
+
+.zt-handover-card__header,
+.zt-handover-list__item,
+.zt-handover-section__header,
+.zt-signature-pad__header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zt-handover-card__header p {
+  margin: 6px 0 0;
+  color: var(--zt-muted);
+}
+
+.zt-handover-card__actions {
+  gap: 6px;
+}
+
+.zt-handover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.zt-handover-list__item {
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border: 1px solid rgba(42, 102, 181, 0.08);
+}
+
+.zt-handover-modal::part(content) {
+  --width: min(960px, 96vw);
+  --height: min(92vh, 980px);
+}
+
+.zt-task-modal__panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.zt-task-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(42, 102, 181, 0.08);
+  background: rgba(247, 251, 255, 0.94);
+}
+
+.zt-task-modal__header h2,
+.zt-task-modal__header p {
+  margin: 0;
+}
+
+.zt-task-modal__header p {
+  margin-top: 6px;
+  color: var(--zt-muted);
+}
+
+.zt-handover-form,
+.zt-handover-detail {
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.zt-handover-note {
+  display: block;
+  padding: 0 16px;
+  color: var(--zt-muted);
+}
+
+.zt-handover-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.zt-handover-checklist-row,
+.zt-handover-signatures {
+  display: grid;
+  gap: 12px;
+}
+
+.zt-handover-checklist-row {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(42, 102, 181, 0.08);
+}
+
+.zt-handover-checklist-row__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--zt-ink);
+  font-weight: 600;
+}
+
+.zt-handover-damage-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(42, 102, 181, 0.08);
+}
+
+.zt-handover-upload {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px dashed rgba(42, 102, 181, 0.3);
+  color: var(--zt-ink);
+  background: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+.zt-handover-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.zt-handover-signatures {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.zt-signature-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(42, 102, 181, 0.08);
+}
+
+.zt-signature-pad__clear {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #3f6ec4;
+  font-weight: 700;
+}
+
+.zt-signature-pad__canvas {
+  width: 100%;
+  height: 170px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px dashed rgba(42, 102, 181, 0.3);
+  touch-action: none;
+}
+
+.zt-handover-html {
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(42, 102, 181, 0.08);
+}
+
+.zt-inspection-map {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.zt-inspection-map__canvas {
+  padding: 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border: 1px solid rgba(42, 102, 181, 0.08);
+}
+
+.zt-inspection-map__svg {
+  width: 100%;
+  height: auto;
+}
+
+.zt-inspection-map__car-shell {
+  fill: #dbe7f7;
+  stroke: #5b78aa;
+  stroke-width: 3;
+}
+
+.zt-inspection-map__glass,
+.zt-inspection-map__dashboard {
+  fill: #f3f7fd;
+  stroke: #89a4d1;
+  stroke-width: 2;
+}
+
+.zt-inspection-map__accent {
+  fill: none;
+  stroke: #5a78ae;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.zt-inspection-map__accent-soft {
+  fill: #c9d9f2;
+  stroke: none;
+}
+
+.zt-inspection-map__seat {
+  fill: #e7effa;
+  stroke: #89a4d1;
+  stroke-width: 2;
+}
+
+.zt-inspection-map__wheel {
+  fill: #d0d8e6;
+  stroke: #607087;
+  stroke-width: 3;
+}
+
+.zt-inspection-map__zone rect,
+.zt-inspection-map__zone circle {
+  fill: rgba(62, 112, 197, 0.14);
+  stroke: #3e70c5;
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+.zt-inspection-map__zone text {
+  fill: #1f3c73;
+  font-size: 16px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.zt-inspection-map__zone.is-complete rect,
+.zt-inspection-map__zone.is-complete circle {
+  fill: rgba(50, 173, 109, 0.18);
+  stroke: #23a05f;
+}
+
+.zt-inspection-map__legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.zt-inspection-map__legend-item {
+  appearance: none;
+  border: 1px solid rgba(42, 102, 181, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--zt-ink);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+}
+
+.zt-inspection-map__legend-bullet {
+  display: inline-flex;
+  align-items: center;
+  color: #7b8ba7;
+}
+
+.zt-inspection-map__legend-bullet.is-complete {
+  color: #22a559;
+}
+
+.zt-inspection-map__hint {
+  margin: 0;
+}
+
+@media (max-width: 575px) {
+  .zt-handover-card__header,
+  .zt-handover-list__item,
+  .zt-handover-section__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .zt-handover-card__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .zt-handover-signatures {
+    grid-template-columns: 1fr;
+  }
+
+  .zt-inspection-map__legend {
+    grid-template-columns: 1fr;
+  }
+}

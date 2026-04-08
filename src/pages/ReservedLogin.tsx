@@ -15,6 +15,7 @@ import { eye, eyeOff } from 'ionicons/icons';
 import { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { consumePendingReservedRoute } from '../lib/reserved-task-routing';
 import './ReservedArea.css';
 
 const ReservedLogin: React.FC = () => {
@@ -41,7 +42,7 @@ const ReservedLogin: React.FC = () => {
     try {
       await login(email, password);
       setError('');
-      history.replace('/reserved');
+      history.replace(consumePendingReservedRoute() ?? '/reserved');
     } catch (exception) {
       const message =
         exception instanceof Error

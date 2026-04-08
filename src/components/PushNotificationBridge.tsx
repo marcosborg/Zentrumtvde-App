@@ -17,12 +17,16 @@ import {
   isAndroidPushSupported,
   setStoredPushToken,
 } from '../lib/push-notifications';
+import {
+  consumePendingReservedRoute,
+  storePendingReservedRoute,
+} from '../lib/reserved-task-routing';
 
 const PUSH_CHANNEL_ID = 'new-contacts-alerts';
 
 const PushNotificationBridge: React.FC = () => {
   const history = useHistory();
-  const { token } = useAuth();
+  const { isAuthenticated, isReady, token } = useAuth();
 
   useEffect(() => {
     if (!isAndroidPushSupported()) {
@@ -48,12 +52,26 @@ const PushNotificationBridge: React.FC = () => {
     };
 
     const setupPush = async (): Promise<void> => {
+      await PushNotifications.deleteChannel({ id: PUSH_CHANNEL_ID }).catch(() => undefined);
+      await LocalNotifications.deleteChannel({ id: PUSH_CHANNEL_ID }).catch(() => undefined);
+
       await PushNotifications.createChannel({
         id: PUSH_CHANNEL_ID,
         name: 'Novos contactos',
         description: 'Alertas de novos contactos e tasks urgentes.',
         importance: 5,
-        sound: 'default',
+        vibration: true,
+        lights: true,
+        visibility: 1,
+      }).catch(() => undefined);
+
+      await LocalNotifications.createChannel({
+        id: PUSH_CHANNEL_ID,
+        name: 'Novos contactos',
+        description: 'Alertas de novos contactos e tasks urgentes.',
+        importance: 5,
+        vibration: true,
+        lights: true,
         visibility: 1,
       }).catch(() => undefined);
 
@@ -84,6 +102,20 @@ const PushNotificationBridge: React.FC = () => {
       await PushNotifications.register();
     };
 
+    const openReservedRoute = (route: string | null) => {
+      if (!route) {
+        return;
+      }
+
+      storePendingReservedRoute(route);
+
+      if (!isReady) {
+        return;
+      }
+
+      history.replace(isAuthenticated ? route : '/auth/login');
+    };
+
     const registrationListener = PushNotifications.addListener('registration', ({ value }) => {
       if (cancelled || !value) {
         return;
@@ -108,6 +140,7 @@ const PushNotificationBridge: React.FC = () => {
             title,
             body,
             channelId: PUSH_CHANNEL_ID,
+            schedule: { at: new Date(Date.now() + 250) },
             extra: route ? { route } : undefined,
             smallIcon: 'ic_launcher_foreground',
           },
@@ -118,9 +151,7 @@ const PushNotificationBridge: React.FC = () => {
     const actionListener = PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
       const route = extractTaskRouteFromPushPayload(event);
 
-      if (route) {
-        history.push(route);
-      }
+      openReservedRoute(route);
     });
 
     const localActionListener = LocalNotifications.addListener('localNotificationActionPerformed', (event: LocalNotificationActionPerformed) => {
@@ -128,9 +159,7 @@ const PushNotificationBridge: React.FC = () => {
         ? event.notification.extra.route
         : null;
 
-      if (route) {
-        history.push(route);
-      }
+      openReservedRoute(route);
     });
 
     void setupPush();
@@ -142,7 +171,19 @@ const PushNotificationBridge: React.FC = () => {
       void actionListener.then((listener: { remove: () => Promise<void> }) => listener.remove());
       void localActionListener.then((listener: { remove: () => Promise<void> }) => listener.remove());
     };
-  }, [history, token]);
+  }, [history, isAuthenticated, isReady, token]);
+
+  useEffect(() => {
+    if (!isReady || !isAuthenticated) {
+      return;
+    }
+
+    const pendingRoute = consumePendingReservedRoute();
+
+    if (pendingRoute) {
+      history.replace(pendingRoute);
+    }
+  }, [history, isAuthenticated, isReady]);
 
   useEffect(() => {
     if (!token || !isAndroidPushSupported()) {

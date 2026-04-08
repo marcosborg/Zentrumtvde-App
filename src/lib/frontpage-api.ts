@@ -1,6 +1,11 @@
 import { Capacitor } from '@capacitor/core';
 import type { CandidateApplicationBootstrap, CandidateApplicationRecord } from '../types/candidate';
 import type { FrontpagePayload } from '../types/frontpage';
+import type {
+  VehicleHandoverBootstrapPayload,
+  VehicleHandoverCreatePayload,
+  VehicleHandoverDetail,
+} from '../types/handover';
 import type { KanbanBoardPayload, KanbanContactPayload, KanbanTaskPayload, KanbanTaskSearchPayload } from '../types/kanban';
 import type { ReservedOverviewPayload } from '../types/reserved';
 
@@ -38,6 +43,7 @@ export const chatSessionEndpoint = `${apiBaseUrl}/app/chat/session`;
 export const chatMessageEndpoint = `${apiBaseUrl}/app/chat/message`;
 export const kanbanEndpoint = `${apiBaseUrl}/app/kanban`;
 export const reservedOpsEndpoint = `${apiBaseUrl}/app/ops/overview`;
+export const reservedVehicleHandoversEndpoint = `${apiBaseUrl}/app/ops/vehicle-handovers`;
 
 export type ContactFormPayload = {
   name: string;
@@ -410,6 +416,55 @@ export async function fetchReservedOverview(token: string): Promise<ReservedOver
   }
 
   return data;
+}
+
+export async function fetchVehicleHandoversBootstrap(token: string): Promise<VehicleHandoverBootstrapPayload> {
+  const response = await authFetch(reservedVehicleHandoversEndpoint, token, {
+    method: 'GET',
+  });
+
+  const data = (await response.json().catch(() => null)) as VehicleHandoverBootstrapPayload | { message?: string } | null;
+
+  if (!response.ok || !data || !('recent_procedures' in data)) {
+    throw new Error((data && 'message' in data && data.message) || 'Nao foi possivel carregar os procedimentos.');
+  }
+
+  return data;
+}
+
+export async function createVehicleHandover(token: string, payload: VehicleHandoverCreatePayload): Promise<VehicleHandoverDetail> {
+  const response = await authFetch(reservedVehicleHandoversEndpoint, token, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | { procedure: VehicleHandoverDetail; message?: string; errors?: Record<string, string[]> }
+    | { message?: string; errors?: Record<string, string[]> }
+    | null;
+
+  if (!response.ok || !data || !('procedure' in data)) {
+    throw data ?? new Error('Nao foi possivel registar o procedimento.');
+  }
+
+  return data.procedure;
+}
+
+export async function fetchVehicleHandover(token: string, procedureId: number): Promise<VehicleHandoverDetail> {
+  const response = await authFetch(`${reservedVehicleHandoversEndpoint}/${procedureId}`, token, {
+    method: 'GET',
+  });
+
+  const data = (await response.json().catch(() => null)) as { procedure: VehicleHandoverDetail; message?: string } | { message?: string } | null;
+
+  if (!response.ok || !data || !('procedure' in data)) {
+    throw new Error((data && 'message' in data && data.message) || 'Nao foi possivel carregar o procedimento.');
+  }
+
+  return data.procedure;
 }
 
 export async function fetchCandidateApplication(token?: string): Promise<CandidateApplicationBootstrap> {

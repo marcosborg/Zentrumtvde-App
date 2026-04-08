@@ -3,6 +3,11 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { searchKanbanTasks } from '../lib/frontpage-api';
 import {
+  consumePendingIncomingCallPhone,
+  storePendingIncomingCallPhone,
+  storePendingReservedRoute,
+} from '../lib/reserved-task-routing';
+import {
   IncomingCall,
   isIncomingCallSupported,
   normalizePhoneNumber,
@@ -13,11 +18,11 @@ import {
 const IncomingCallBridge: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, isReady } = useAuth();
   const lastHandledKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isIncomingCallSupported() || !token || !isAuthenticated) {
+    if (!isIncomingCallSupported()) {
       return undefined;
     }
 
@@ -28,6 +33,16 @@ const IncomingCallBridge: React.FC = () => {
       const normalizedPhone = normalizePhoneNumber(rawPhoneNumber);
 
       if (!normalizedPhone) {
+        return;
+      }
+
+      if (!token || !isAuthenticated) {
+        storePendingIncomingCallPhone(rawPhoneNumber);
+
+        if (isReady) {
+          history.replace('/auth/login');
+        }
+
         return;
       }
 
@@ -52,12 +67,13 @@ const IncomingCallBridge: React.FC = () => {
         }
 
         const nextRoute = `/reserved/tasks?task=${exactMatch.id}`;
+        storePendingReservedRoute(nextRoute);
 
         if (location.pathname === '/reserved/tasks' && location.search === `?task=${exactMatch.id}`) {
           return;
         }
 
-        history.push(nextRoute);
+        history.replace(nextRoute);
         return;
       }
     };
@@ -124,7 +140,53 @@ const IncomingCallBridge: React.FC = () => {
       void listenerPromise.then((listener) => listener.remove());
       void tapListenerPromise.then((listener) => listener.remove());
     };
-  }, [history, isAuthenticated, location.pathname, location.search, token]);
+  }, [history, isAuthenticated, isReady, location.pathname, location.search, token]);
+
+  useEffect(() => {
+    if (!isReady || !isAuthenticated || !token) {
+      return;
+    }
+
+    const pendingPhone = consumePendingIncomingCallPhone();
+
+    if (!pendingPhone) {
+      return;
+    }
+
+    void (async () => {
+      const normalizedPhone = normalizePhoneNumber(pendingPhone);
+
+      if (!normalizedPhone) {
+        return;
+      }
+
+      const searchTerms = Array.from(
+        new Set([
+          pendingPhone,
+          normalizedPhone,
+          normalizedPhone.length > 9 ? normalizedPhone.slice(-9) : '',
+        ].filter((term) => term.trim() !== '')),
+      );
+
+      for (const searchTerm of searchTerms) {
+        const searchPayload = await searchKanbanTasks(token, searchTerm);
+
+        const exactMatch = searchPayload.results.find((task) => phonesLikelyMatch(task.phone, normalizedPhone) && !task.is_deleted)
+          ?? searchPayload.results.find((task) => phonesLikelyMatch(task.phone, normalizedPhone))
+          ?? searchPayload.results.find((task) => !task.is_deleted)
+          ?? searchPayload.results[0];
+
+        if (!exactMatch) {
+          continue;
+        }
+
+        const nextRoute = `/reserved/tasks?task=${exactMatch.id}`;
+        storePendingReservedRoute(nextRoute);
+        history.replace(nextRoute);
+        return;
+      }
+    })().catch(() => undefined);
+  }, [history, isAuthenticated, isReady, token]);
 
   return null;
 };

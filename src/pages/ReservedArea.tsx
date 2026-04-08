@@ -30,6 +30,7 @@ import {
   apps,
   call,
   carSport,
+  chatboxEllipses,
   close,
   documentText,
   idCard,
@@ -43,6 +44,7 @@ import {
 } from 'ionicons/icons';
 import { useEffect, useRef, useState } from 'react';
 import { Redirect, Route, useHistory, useLocation } from 'react-router-dom';
+import VehicleHandoverPanel from '../components/VehicleHandoverPanel';
 import { useAuth } from '../context/AuthContext';
 import {
   addKanbanTaskComment,
@@ -60,6 +62,7 @@ import type { ReservedOverviewPayload } from '../types/reserved';
 import './ReservedArea.css';
 
 const PENDING_CALL_TASK_STORAGE_KEY = 'reserved_pending_call_task_id';
+const RESERVED_TASK_SMS_BODY = 'Ligamos da Zentrum TVDE. Por favor, queira devolver a chamada para podermos apresentar as condições de aluguer das nossas viaturas.';
 
 const ReservedArea: React.FC = () => {
   const history = useHistory();
@@ -274,6 +277,12 @@ const ReservedArea: React.FC = () => {
 
     window.localStorage.setItem(PENDING_CALL_TASK_STORAGE_KEY, String(activeTask.id));
     window.location.href = `tel:${activeTask.phone}`;
+  };
+
+  const buildSmsHref = (phone: string) => {
+    const separator = phone.includes('?') ? '&' : '?';
+
+    return `sms:${phone}${separator}body=${encodeURIComponent(RESERVED_TASK_SMS_BODY)}`;
   };
 
   const openCreateContactModal = () => {
@@ -881,6 +890,7 @@ const ReservedArea: React.FC = () => {
             </IonCard>
           ) : (
             <div className="zt-stage-list">
+              <VehicleHandoverPanel token={token} />
               {overviewData?.vehicles.length ? overviewData.vehicles.map((vehicle) => (
                 <IonCard key={vehicle.id} className="zt-card zt-record-card">
                   <IonCardContent>
@@ -1122,6 +1132,15 @@ const ReservedArea: React.FC = () => {
                           <IonButton expand="block" onClick={handleCallTask} disabled={!activeTask.phone}>
                             <IonIcon icon={call} slot="start" />
                             Ligar
+                          </IonButton>
+                          <IonButton
+                            expand="block"
+                            fill="outline"
+                            href={activeTask.phone ? buildSmsHref(activeTask.phone) : undefined}
+                            disabled={!activeTask.phone}
+                          >
+                            <IonIcon icon={chatboxEllipses} slot="start" />
+                            SMS
                           </IonButton>
                           <IonButton
                             expand="block"
