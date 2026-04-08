@@ -659,6 +659,26 @@
   gap: 14px;
 }
 
+.zt-inspection-map__views {
+  margin-inline: -2px;
+}
+
+.zt-inspection-map__views ion-segment {
+  --background: rgba(255, 255, 255, 0.86);
+  --color: var(--zt-muted);
+  --color-checked: #ffffff;
+  --indicator-color: var(--zt-blue);
+  width: 100%;
+  padding: 4px;
+}
+
+.zt-inspection-map__views ion-segment-button {
+  min-width: 112px;
+  white-space: nowrap;
+  text-transform: none;
+  font-size: 0.9rem;
+}
+
 .zt-inspection-map__canvas {
   padding: 12px;
   border-radius: 18px;
@@ -796,5 +816,25 @@
 
   .zt-inspection-map__legend {
     grid-template-columns: 1fr;
+  }
+
+  .zt-inspection-map__views {
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .zt-inspection-map__views::-webkit-scrollbar {
+    display: none;
+  }
+
+  .zt-inspection-map__views ion-segment {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .zt-inspection-map__views ion-segment-button {
+    min-width: 118px;
   }
 }

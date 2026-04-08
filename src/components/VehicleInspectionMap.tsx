@@ -119,13 +119,19 @@ const VehicleInspectionMap: React.FC<VehicleInspectionMapProps> = ({ zones, phot
 
   return (
     <div className="zt-inspection-map">
-      <IonSegment value={activeView} onIonChange={(event) => setActiveView(String(event.detail.value || 'front'))}>
-        {availableViews.map((view) => (
-          <IonSegmentButton key={view} value={view}>
-            {viewLabels[view] || view}
-          </IonSegmentButton>
-        ))}
-      </IonSegment>
+      <div className="zt-inspection-map__views">
+        <IonSegment
+          value={activeView}
+          scrollable
+          onIonChange={(event) => setActiveView(String(event.detail.value || 'front'))}
+        >
+          {availableViews.map((view) => (
+            <IonSegmentButton key={view} value={view}>
+              {viewLabels[view] || view}
+            </IonSegmentButton>
+          ))}
+        </IonSegment>
+      </div>
 
       <div className="zt-inspection-map__canvas">
         <svg viewBox="0 0 320 160" className="zt-inspection-map__svg" role="img" aria-label={`Mapa ${viewLabels[activeView] || activeView}`}>
