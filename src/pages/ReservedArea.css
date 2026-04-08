@@ -660,23 +660,40 @@
 }
 
 .zt-inspection-map__views {
-  margin-inline: -2px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-.zt-inspection-map__views ion-segment {
-  --background: rgba(255, 255, 255, 0.86);
-  --color: var(--zt-muted);
-  --color-checked: #ffffff;
-  --indicator-color: var(--zt-blue);
-  width: 100%;
-  padding: 4px;
+.zt-inspection-map__views::-webkit-scrollbar {
+  display: none;
 }
 
-.zt-inspection-map__views ion-segment-button {
+.zt-inspection-map__view-chip {
+  appearance: none;
+  border: 1px solid rgba(42, 102, 181, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--zt-muted);
+  border-radius: 999px;
+  padding: 10px 14px;
   min-width: 112px;
   white-space: nowrap;
   text-transform: none;
   font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  flex: 0 0 auto;
+  box-shadow: 0 6px 14px rgba(42, 102, 181, 0.08);
+}
+
+.zt-inspection-map__view-chip.is-active {
+  background: var(--zt-blue);
+  border-color: var(--zt-blue);
+  color: #ffffff;
+  box-shadow: 0 10px 18px rgba(50, 93, 164, 0.22);
 }
 
 .zt-inspection-map__canvas {
@@ -818,23 +835,7 @@
     grid-template-columns: 1fr;
   }
 
-  .zt-inspection-map__views {
-    overflow-x: auto;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .zt-inspection-map__views::-webkit-scrollbar {
-    display: none;
-  }
-
-  .zt-inspection-map__views ion-segment {
-    width: max-content;
-    min-width: 100%;
-  }
-
-  .zt-inspection-map__views ion-segment-button {
+  .zt-inspection-map__view-chip {
     min-width: 118px;
   }
 }

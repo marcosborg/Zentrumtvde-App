@@ -1,4 +1,4 @@
-import { IonIcon, IonSegment, IonSegmentButton, IonText } from '@ionic/react';
+import { IonIcon, IonText } from '@ionic/react';
 import { camera, checkmarkCircle, ellipseOutline, image } from 'ionicons/icons';
 import { useMemo, useState } from 'react';
 
@@ -120,17 +120,16 @@ const VehicleInspectionMap: React.FC<VehicleInspectionMapProps> = ({ zones, phot
   return (
     <div className="zt-inspection-map">
       <div className="zt-inspection-map__views">
-        <IonSegment
-          value={activeView}
-          scrollable
-          onIonChange={(event) => setActiveView(String(event.detail.value || 'front'))}
-        >
-          {availableViews.map((view) => (
-            <IonSegmentButton key={view} value={view}>
-              {viewLabels[view] || view}
-            </IonSegmentButton>
-          ))}
-        </IonSegment>
+        {availableViews.map((view) => (
+          <button
+            key={view}
+            type="button"
+            className={`zt-inspection-map__view-chip ${activeView === view ? 'is-active' : ''}`}
+            onClick={() => setActiveView(view)}
+          >
+            {viewLabels[view] || view}
+          </button>
+        ))}
       </div>
 
       <div className="zt-inspection-map__canvas">
