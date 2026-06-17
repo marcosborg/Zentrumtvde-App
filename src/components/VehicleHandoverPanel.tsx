@@ -1199,14 +1199,40 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
           </div>
 
           <div className="zt-handover-form">
-            <IonItem lines="full">
-              <IonLabel position="stacked">Procedimento</IonLabel>
-              <IonSelect value={flowMode} onIonChange={(event) => resetCreateState(event.detail.value)} interface="popover">
-                <IonSelectOption value="delivery">Entrega</IonSelectOption>
-                <IonSelectOption value="return">Recolha / devolucao</IonSelectOption>
-                <IonSelectOption value="exchange">Troca de viatura</IonSelectOption>
-              </IonSelect>
-            </IonItem>
+            <div className="zt-handover-section">
+              <div className="zt-handover-section__header">
+                <div>
+                  <strong>Procedimento</strong>
+                  <p>Escolhe como queres tratar a viatura.</p>
+                </div>
+              </div>
+              <div className="zt-handover-flow-options" role="group" aria-label="Procedimento">
+                <button
+                  type="button"
+                  className={`zt-handover-flow-option ${flowMode === 'delivery' ? 'is-active' : ''}`}
+                  onClick={() => resetCreateState('delivery')}
+                >
+                  <strong>Entrega</strong>
+                  <span>Atribuir uma viatura a um motorista.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`zt-handover-flow-option ${flowMode === 'return' ? 'is-active' : ''}`}
+                  onClick={() => resetCreateState('return')}
+                >
+                  <strong>Recolha / devolucao</strong>
+                  <span>Fechar a viatura atual do motorista.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`zt-handover-flow-option ${flowMode === 'exchange' ? 'is-active' : ''}`}
+                  onClick={() => resetCreateState('exchange')}
+                >
+                  <strong>Troca de viatura</strong>
+                  <span>Fazer recolha e entrega em dois autos ligados.</span>
+                </button>
+              </div>
+            </div>
 
             {(flowMode === 'return' || flowMode === 'exchange') ? renderProcedureForm('return', flowMode === 'exchange' ? '1. Recolha da viatura atual' : 'Recolha da viatura') : null}
             {(flowMode === 'delivery' || flowMode === 'exchange') ? renderProcedureForm('delivery', flowMode === 'exchange' ? '2. Entrega da nova viatura' : 'Entrega da viatura') : null}

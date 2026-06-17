@@ -589,6 +589,39 @@
   overflow-y: auto;
 }
 
+.zt-handover-flow-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.zt-handover-flow-option {
+  appearance: none;
+  min-height: 92px;
+  border: 1px solid rgba(42, 102, 181, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--zt-ink);
+  padding: 12px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.zt-handover-flow-option.is-active {
+  border-color: var(--zt-blue);
+  background: rgba(42, 102, 181, 0.08);
+  box-shadow: 0 0 0 2px rgba(42, 102, 181, 0.12);
+}
+
+.zt-handover-flow-option span {
+  color: var(--zt-muted);
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
 .zt-handover-choice {
   appearance: none;
   border: 1px solid rgba(42, 102, 181, 0.1);
@@ -913,6 +946,10 @@
   }
 
   .zt-handover-signatures {
+    grid-template-columns: 1fr;
+  }
+
+  .zt-handover-flow-options {
     grid-template-columns: 1fr;
   }
 
