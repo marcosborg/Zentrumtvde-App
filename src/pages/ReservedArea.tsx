@@ -34,6 +34,7 @@ import {
   close,
   documentText,
   idCard,
+  logoWhatsapp,
   logOutOutline,
   mail,
   people,
@@ -57,6 +58,7 @@ import {
   restoreKanbanTask,
   searchKanbanTasks,
 } from '../lib/frontpage-api';
+import { isWhatsappBusinessSupported, WhatsappBusiness } from '../lib/whatsapp-business';
 import type { KanbanBoardPayload, KanbanTaskDetail, KanbanTaskSummary } from '../types/kanban';
 import type { ReservedOverviewPayload } from '../types/reserved';
 import './ReservedArea.css';
@@ -283,6 +285,46 @@ const ReservedArea: React.FC = () => {
     const separator = phone.includes('?') ? '&' : '?';
 
     return `sms:${phone}${separator}body=${encodeURIComponent(RESERVED_TASK_SMS_BODY)}`;
+  };
+
+  const normalizeWhatsappPhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, '');
+
+    if (digits.length === 9) {
+      return `351${digits}`;
+    }
+
+    if (digits.startsWith('00')) {
+      return digits.slice(2);
+    }
+
+    return digits;
+  };
+
+  const openSmsFallback = (phone: string) => {
+    window.location.href = buildSmsHref(phone);
+  };
+
+  const handleWhatsappBusinessTask = async () => {
+    if (!activeTask?.phone) {
+      return;
+    }
+
+    const phone = normalizeWhatsappPhone(activeTask.phone);
+
+    if (!isWhatsappBusinessSupported()) {
+      openSmsFallback(activeTask.phone);
+      return;
+    }
+
+    try {
+      await WhatsappBusiness.open({
+        phone,
+        text: RESERVED_TASK_SMS_BODY,
+      });
+    } catch {
+      openSmsFallback(activeTask.phone);
+    }
   };
 
   const openCreateContactModal = () => {
@@ -1136,11 +1178,11 @@ const ReservedArea: React.FC = () => {
                           <IonButton
                             expand="block"
                             fill="outline"
-                            href={activeTask.phone ? buildSmsHref(activeTask.phone) : undefined}
+                            onClick={() => void handleWhatsappBusinessTask()}
                             disabled={!activeTask.phone}
                           >
-                            <IonIcon icon={chatboxEllipses} slot="start" />
-                            SMS
+                            <IonIcon icon={logoWhatsapp} slot="start" />
+                            WhatsApp / SMS
                           </IonButton>
                           <IonButton
                             expand="block"

@@ -7,6 +7,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(IncomingCallPlugin.class);
+        registerPlugin(WhatsappBusinessPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
