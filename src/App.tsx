@@ -15,8 +15,8 @@ import {
   setupIonicReact,
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import type { PropsWithChildren } from 'react';
-import { Redirect, Route } from 'react-router-dom';
+import { useEffect, type PropsWithChildren } from 'react';
+import { Redirect, Route, useHistory, useLocation } from 'react-router-dom';
 import {
   call,
   carSport,
@@ -170,6 +170,30 @@ const ProtectedRoute: React.FC<PropsWithChildren<{ path: string; exact?: boolean
   );
 };
 
+const AuthenticatedSessionRedirect: React.FC = () => {
+  const history = useHistory();
+  const location = useLocation();
+  const { isAuthenticated, isReady } = useAuth();
+
+  useEffect(() => {
+    if (!isReady || !isAuthenticated) {
+      return;
+    }
+
+    const isPublicRoute = (
+      location.pathname === '/'
+      || location.pathname === '/auth/login'
+      || location.pathname.startsWith('/tabs')
+    );
+
+    if (isPublicRoute) {
+      history.replace('/reserved/tasks');
+    }
+  }, [history, isAuthenticated, isReady, location.pathname]);
+
+  return null;
+};
+
 const AppFrame: React.FC = () => {
   const { data } = useFrontpageData();
 
@@ -187,6 +211,7 @@ const AppFrame: React.FC = () => {
   return (
     <IonApp>
       <IonReactRouter>
+        <AuthenticatedSessionRedirect />
         <IncomingCallBridge />
         <PushNotificationBridge />
         <IonSplitPane contentId="main-content" when="lg">

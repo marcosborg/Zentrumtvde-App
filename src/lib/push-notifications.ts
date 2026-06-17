@@ -3,7 +3,11 @@ import { Capacitor } from '@capacitor/core';
 const pushTokenStorageKey = 'zentrum_reserved_push_token';
 
 export function isAndroidPushSupported(): boolean {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  return (
+    import.meta.env.VITE_ENABLE_PUSH_NOTIFICATIONS === 'true'
+    && Capacitor.isNativePlatform()
+    && Capacitor.getPlatform() === 'android'
+  );
 }
 
 export function getStoredPushToken(): string | null {

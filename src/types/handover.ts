@@ -52,6 +52,8 @@ export type VehicleHandoverSummary = {
   operator_name?: string | null;
   notes?: string | null;
   pdf_url?: string | null;
+  exchange_group_uuid?: string | null;
+  exchange_related_procedure_id?: number | null;
 };
 
 export type VehicleHandoverDetail = VehicleHandoverSummary & {
@@ -84,6 +86,13 @@ export type VehicleHandoverDetail = VehicleHandoverSummary & {
     required: boolean;
     photo_url?: string | null;
   }>;
+  video_items: Array<{
+    key: 'exterior' | 'interior' | string;
+    label: string;
+    required: boolean;
+    video_url?: string | null;
+    qr_url?: string | null;
+  }>;
   battery_minimum_confirmed: boolean;
   battery_minimum_percent?: number | null;
   deposit_paid_confirmed: boolean;
@@ -93,6 +102,8 @@ export type VehicleHandoverDetail = VehicleHandoverSummary & {
   html_snapshot?: string | null;
   created_allocation_id?: number | null;
   closed_allocation_id?: number | null;
+  email_sent_at?: string | null;
+  email_recipients?: string[] | null;
 };
 
 export type VehicleHandoverBootstrapPayload = {
@@ -129,7 +140,16 @@ export type VehicleHandoverCreatePayload = {
     photo: string | null;
   }>;
   general_photos: string[];
+  video_items: {
+    exterior: File | string | null;
+    interior: File | string | null;
+  };
   notes?: string;
   operator_signature_data_url: string;
   driver_signature_data_url: string;
+};
+
+export type VehicleHandoverExchangePayload = {
+  return_procedure: VehicleHandoverCreatePayload;
+  delivery_procedure: VehicleHandoverCreatePayload;
 };

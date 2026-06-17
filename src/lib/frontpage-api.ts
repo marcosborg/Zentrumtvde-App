@@ -5,6 +5,7 @@ import type {
   VehicleHandoverBootstrapPayload,
   VehicleHandoverCreatePayload,
   VehicleHandoverDetail,
+  VehicleHandoverExchangePayload,
 } from '../types/handover';
 import type { KanbanBoardPayload, KanbanContactPayload, KanbanTaskPayload, KanbanTaskSearchPayload } from '../types/kanban';
 import type { ReservedOverviewPayload } from '../types/reserved';
@@ -44,6 +45,7 @@ export const chatMessageEndpoint = `${apiBaseUrl}/app/chat/message`;
 export const kanbanEndpoint = `${apiBaseUrl}/app/kanban`;
 export const reservedOpsEndpoint = `${apiBaseUrl}/app/ops/overview`;
 export const reservedVehicleHandoversEndpoint = `${apiBaseUrl}/app/ops/vehicle-handovers`;
+export const reservedVehicleHandoverExchangeEndpoint = `${reservedVehicleHandoversEndpoint}/exchange`;
 
 export type ContactFormPayload = {
   name: string;
@@ -432,13 +434,54 @@ export async function fetchVehicleHandoversBootstrap(token: string): Promise<Veh
   return data;
 }
 
+function appendHandoverPayload(formData: FormData, prefix: string, payload: VehicleHandoverCreatePayload): void {
+  const field = (name: string) => (prefix ? `${prefix}[${name}]` : name);
+
+  formData.append(field('type'), payload.type);
+  formData.append(field('vehicle_id'), String(payload.vehicle_id));
+  formData.append(field('driver_id'), String(payload.driver_id));
+  formData.append(field('performed_at'), payload.performed_at);
+  formData.append(field('notes'), payload.notes ?? '');
+  formData.append(field('operator_signature_data_url'), payload.operator_signature_data_url);
+  formData.append(field('driver_signature_data_url'), payload.driver_signature_data_url);
+
+  Object.entries(payload.checklist_payload).forEach(([key, value]) => {
+    formData.append(`${field('checklist_payload')}[${key}][checked]`, value.checked ? '1' : '0');
+    formData.append(`${field('checklist_payload')}[${key}][value]`, value.value ?? '');
+  });
+
+  Object.entries(payload.guided_photo_items).forEach(([key, value]) => {
+    formData.append(`${field('guided_photo_items')}[${key}][photo]`, value.photo ?? '');
+  });
+
+  payload.general_photos.forEach((photo, index) => {
+    formData.append(`${field('general_photos')}[${index}]`, photo);
+  });
+
+  payload.damage_items.forEach((item, index) => {
+    formData.append(`${field('damage_items')}[${index}][type]`, item.type);
+    formData.append(`${field('damage_items')}[${index}][zone]`, item.zone);
+    formData.append(`${field('damage_items')}[${index}][description]`, item.description ?? '');
+    formData.append(`${field('damage_items')}[${index}][photo]`, item.photo ?? '');
+  });
+
+  (['exterior', 'interior'] as const).forEach((key) => {
+    const video = payload.video_items[key];
+    if (video instanceof File) {
+      formData.append(`${field('video_items')}[${key}]`, video, video.name);
+    } else {
+      formData.append(`${field('video_items')}[${key}]`, video ?? '');
+    }
+  });
+}
+
 export async function createVehicleHandover(token: string, payload: VehicleHandoverCreatePayload): Promise<VehicleHandoverDetail> {
+  const formData = new FormData();
+  appendHandoverPayload(formData, '', payload);
+
   const response = await authFetch(reservedVehicleHandoversEndpoint, token, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    body: formData,
   });
 
   const data = (await response.json().catch(() => null)) as
@@ -451,6 +494,31 @@ export async function createVehicleHandover(token: string, payload: VehicleHando
   }
 
   return data.procedure;
+}
+
+export async function createVehicleHandoverExchange(
+  token: string,
+  payload: VehicleHandoverExchangePayload,
+): Promise<{ return: VehicleHandoverDetail; delivery: VehicleHandoverDetail }> {
+  const formData = new FormData();
+  appendHandoverPayload(formData, 'return_procedure', payload.return_procedure);
+  appendHandoverPayload(formData, 'delivery_procedure', payload.delivery_procedure);
+
+  const response = await authFetch(reservedVehicleHandoverExchangeEndpoint, token, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | { procedures: { return: VehicleHandoverDetail; delivery: VehicleHandoverDetail }; message?: string; errors?: Record<string, string[]> }
+    | { message?: string; errors?: Record<string, string[]> }
+    | null;
+
+  if (!response.ok || !data || !('procedures' in data)) {
+    throw data ?? new Error('Nao foi possivel registar a troca.');
+  }
+
+  return data.procedures;
 }
 
 export async function fetchVehicleHandover(token: string, procedureId: number): Promise<VehicleHandoverDetail> {

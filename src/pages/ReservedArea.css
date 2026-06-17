@@ -564,6 +564,54 @@
   gap: 12px;
 }
 
+.zt-handover-procedure {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(42, 102, 181, 0.1);
+}
+
+.zt-handover-search-grid,
+.zt-handover-video-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.zt-handover-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.zt-handover-choice {
+  appearance: none;
+  border: 1px solid rgba(42, 102, 181, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--zt-ink);
+  padding: 10px 12px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zt-handover-choice.is-active {
+  border-color: var(--zt-blue);
+  box-shadow: 0 0 0 2px rgba(42, 102, 181, 0.12);
+}
+
+.zt-handover-choice span {
+  color: var(--zt-muted);
+  font-size: 0.86rem;
+}
+
 .zt-handover-checklist-row,
 .zt-handover-signatures {
   display: grid;
@@ -609,10 +657,47 @@
   overflow: hidden;
 }
 
+.zt-handover-video-card {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.zt-handover-video-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .zt-handover-upload input {
   position: absolute;
   inset: 0;
   opacity: 0;
+}
+
+.zt-photo-recorder-modal::part(content),
+.zt-video-recorder-modal::part(content) {
+  --width: min(94vw, 720px);
+  --height: auto;
+}
+
+.zt-photo-recorder,
+.zt-video-recorder {
+  gap: 16px;
+}
+
+.zt-photo-recorder__preview,
+.zt-video-recorder__preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #111827;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.zt-photo-recorder__actions,
+.zt-video-recorder__actions {
+  display: grid;
+  gap: 8px;
 }
 
 .zt-handover-signatures {
@@ -828,6 +913,11 @@
   }
 
   .zt-handover-signatures {
+    grid-template-columns: 1fr;
+  }
+
+  .zt-handover-search-grid,
+  .zt-handover-video-grid {
     grid-template-columns: 1fr;
   }
 

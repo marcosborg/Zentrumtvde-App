@@ -3,16 +3,16 @@ import type { Photo } from '@capacitor/camera';
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2200;
 
-export async function optimizeUploadFile(file: File): Promise<File> {
+export async function optimizeUploadFile(file: File, maxBytes = MAX_UPLOAD_BYTES, maxImageDimension = MAX_IMAGE_DIMENSION): Promise<File> {
   if (!file.type.startsWith('image/')) {
-    if (file.size > MAX_UPLOAD_BYTES) {
-      throw new Error('Cada ficheiro deve ter no maximo 10 MB.');
+    if (file.size > maxBytes) {
+      throw new Error(`Cada ficheiro deve ter no maximo ${formatBytes(maxBytes)}.`);
     }
 
     return file;
   }
 
-  if (file.size <= MAX_UPLOAD_BYTES) {
+  if (file.size <= maxBytes) {
     return file;
   }
 
@@ -21,8 +21,8 @@ export async function optimizeUploadFile(file: File): Promise<File> {
   let height = image.naturalHeight;
   const longestSide = Math.max(width, height);
 
-  if (longestSide > MAX_IMAGE_DIMENSION) {
-    const ratio = MAX_IMAGE_DIMENSION / longestSide;
+  if (longestSide > maxImageDimension) {
+    const ratio = maxImageDimension / longestSide;
     width = Math.max(1, Math.round(width * ratio));
     height = Math.max(1, Math.round(height * ratio));
   }
@@ -32,7 +32,7 @@ export async function optimizeUploadFile(file: File): Promise<File> {
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const blob = await renderJpeg(image, width, height, quality);
 
-    if (blob.size <= MAX_UPLOAD_BYTES) {
+    if (blob.size <= maxBytes) {
       return new File([blob], replaceExtension(file.name, 'jpg'), {
         type: 'image/jpeg',
         lastModified: Date.now(),
@@ -48,10 +48,10 @@ export async function optimizeUploadFile(file: File): Promise<File> {
     height = Math.max(960, Math.round(height * 0.85));
   }
 
-  throw new Error('Nao foi possivel reduzir a imagem para menos de 10 MB.');
+  throw new Error(`Nao foi possivel reduzir a imagem para menos de ${formatBytes(maxBytes)}.`);
 }
 
-export async function photoToOptimizedFile(photo: Photo, fileNamePrefix: string): Promise<File> {
+export async function photoToOptimizedFile(photo: Photo, fileNamePrefix: string, maxBytes = MAX_UPLOAD_BYTES, maxImageDimension = MAX_IMAGE_DIMENSION): Promise<File> {
   if (!photo.webPath) {
     throw new Error('Imagem indisponivel para upload.');
   }
@@ -64,7 +64,7 @@ export async function photoToOptimizedFile(photo: Photo, fileNamePrefix: string)
     lastModified: Date.now(),
   });
 
-  return optimizeUploadFile(file);
+  return optimizeUploadFile(file, maxBytes, maxImageDimension);
 }
 
 function normalizeExtension(extension: string): string {
@@ -130,4 +130,9 @@ function renderJpeg(
       quality,
     );
   });
+}
+
+function formatBytes(bytes: number): string {
+  const megabytes = bytes / (1024 * 1024);
+  return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(1)} MB`;
 }
