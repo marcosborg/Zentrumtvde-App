@@ -214,7 +214,7 @@ const AppFrame: React.FC = () => {
         <AuthenticatedSessionRedirect />
         <IncomingCallBridge />
         <PushNotificationBridge />
-        <IonSplitPane contentId="main-content" when="lg">
+        <IonSplitPane contentId="main-content" when={false}>
           <IonMenu contentId="main-content" type="overlay" className="zt-menu">
             <IonContent>
               <div className="zt-menu__header">
