@@ -5,7 +5,6 @@ import type {
   VehicleHandoverBootstrapPayload,
   VehicleHandoverCreatePayload,
   VehicleHandoverDetail,
-  VehicleHandoverExchangePayload,
 } from '../types/handover';
 import type { KanbanBoardPayload, KanbanContactPayload, KanbanTaskPayload, KanbanTaskSearchPayload } from '../types/kanban';
 import type { ReservedOverviewPayload } from '../types/reserved';
@@ -17,7 +16,17 @@ function resolveApiBaseUrl(): string {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
   if (configuredBaseUrl) {
-    return configuredBaseUrl.replace(/\/+$/, '');
+    const normalizedBaseUrl = configuredBaseUrl.replace(/\/+$/, '');
+
+    // Fail closed in the development browser: an accidental env override must
+    // never send reads or writes to the production API/database.
+    if (import.meta.env.DEV && normalizedBaseUrl === PRODUCTION_API_BASE_URL) {
+      throw new Error(
+        'Unsafe development configuration: VITE_API_BASE_URL cannot point to production.',
+      );
+    }
+
+    return normalizedBaseUrl;
   }
 
   if (Capacitor.isNativePlatform()) {
@@ -45,7 +54,6 @@ export const chatMessageEndpoint = `${apiBaseUrl}/app/chat/message`;
 export const kanbanEndpoint = `${apiBaseUrl}/app/kanban`;
 export const reservedOpsEndpoint = `${apiBaseUrl}/app/ops/overview`;
 export const reservedVehicleHandoversEndpoint = `${apiBaseUrl}/app/ops/vehicle-handovers`;
-export const reservedVehicleHandoverExchangeEndpoint = `${reservedVehicleHandoversEndpoint}/exchange`;
 
 export type ContactFormPayload = {
   name: string;
@@ -496,29 +504,52 @@ export async function createVehicleHandover(token: string, payload: VehicleHando
   return data.procedure;
 }
 
-export async function createVehicleHandoverExchange(
-  token: string,
-  payload: VehicleHandoverExchangePayload,
-): Promise<{ return: VehicleHandoverDetail; delivery: VehicleHandoverDetail }> {
-  const formData = new FormData();
-  appendHandoverPayload(formData, 'return_procedure', payload.return_procedure);
-  appendHandoverPayload(formData, 'delivery_procedure', payload.delivery_procedure);
-
-  const response = await authFetch(reservedVehicleHandoverExchangeEndpoint, token, {
-    method: 'POST',
-    body: formData,
-  });
-
+async function handoverProcedureResponse(response: Response, fallback: string): Promise<VehicleHandoverDetail> {
   const data = (await response.json().catch(() => null)) as
-    | { procedures: { return: VehicleHandoverDetail; delivery: VehicleHandoverDetail }; message?: string; errors?: Record<string, string[]> }
+    | { procedure: VehicleHandoverDetail; message?: string; errors?: Record<string, string[]> }
     | { message?: string; errors?: Record<string, string[]> }
     | null;
-
-  if (!response.ok || !data || !('procedures' in data)) {
-    throw data ?? new Error('Nao foi possivel registar a troca.');
+  if (!response.ok || !data || !('procedure' in data)) {
+    throw data ?? new Error(fallback);
   }
+  return data.procedure;
+}
 
-  return data.procedures;
+export async function createVehicleHandoverDraft(token: string, payload: Pick<VehicleHandoverCreatePayload, 'type' | 'vehicle_id' | 'driver_id' | 'performed_at'>): Promise<VehicleHandoverDetail> {
+  const response = await authFetch(`${reservedVehicleHandoversEndpoint}/draft`, token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  });
+  return handoverProcedureResponse(response, 'Nao foi possivel criar o rascunho.');
+}
+
+export async function updateVehicleHandoverDraft(token: string, id: number, payload: Record<string, unknown>): Promise<VehicleHandoverDetail> {
+  const response = await authFetch(`${reservedVehicleHandoversEndpoint}/${id}/draft`, token, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  });
+  return handoverProcedureResponse(response, 'Nao foi possivel guardar o rascunho.');
+}
+
+export async function uploadVehicleHandoverDraftMedia(token: string, id: number, kind: 'photo' | 'video', key: string, media: File | string): Promise<VehicleHandoverDetail> {
+  const formData = new FormData();
+  formData.append('kind', kind);
+  formData.append('key', key);
+  if (media instanceof File) {
+    formData.append('media', media, media.name);
+  } else {
+    formData.append('media', media);
+  }
+  const response = await authFetch(`${reservedVehicleHandoversEndpoint}/${id}/media`, token, { method: 'POST', body: formData });
+  return handoverProcedureResponse(response, 'Nao foi possivel guardar o ficheiro.');
+}
+
+export async function completeVehicleHandoverDraft(token: string, id: number): Promise<VehicleHandoverDetail> {
+  const response = await authFetch(`${reservedVehicleHandoversEndpoint}/${id}/complete`, token, { method: 'POST' });
+  return handoverProcedureResponse(response, 'Nao foi possivel concluir o auto.');
+}
+
+export async function deleteVehicleHandoverDraft(token: string, id: number): Promise<void> {
+  const response = await authFetch(`${reservedVehicleHandoversEndpoint}/${id}/draft`, token, { method: 'DELETE' });
+  if (!response.ok) throw new Error('Nao foi possivel eliminar o rascunho.');
 }
 
 export async function fetchVehicleHandover(token: string, procedureId: number): Promise<VehicleHandoverDetail> {
