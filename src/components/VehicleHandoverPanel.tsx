@@ -75,7 +75,7 @@ type ProcedureDraft = {
   driverQuery: string;
 };
 
-type PersistedProcedureDraft = ProcedureDraft;
+type PersistedProcedureDraft = Omit<ProcedureDraft, 'videoItems'>;
 
 type PersistedCreateState = {
   modalOpen: boolean;
@@ -173,7 +173,7 @@ function fromPersistedDraft(
       ...buildDraft(persistedDraft.type, bootstrap).guidedPhotoItems,
       ...persistedDraft.guidedPhotoItems,
     },
-    videoItems: persistedDraft.videoItems ?? { exterior: null, interior: null },
+    videoItems: { exterior: null, interior: null },
   };
 }
 
@@ -847,28 +847,8 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
         }
         setCreateError('');
         setIsVideoRecording(false);
-        setIsVideoUploading(true);
-
-        void uploadVehicleHandoverVideo(token ?? '', file)
-          .then((path) => {
-            const draft = captureTarget.target === 'return' ? returnDraft : deliveryDraft;
-            patchDraft(captureTarget.target, {
-              videoItems: {
-                ...draft.videoItems,
-                [captureTarget.key]: path,
-              },
-            });
-            setCreateError('');
-            setVideoCaptureTarget(null);
-            stopVideoStream();
-          })
-          .catch((uploadError: unknown) => {
-            const message = uploadError && typeof uploadError === 'object' && 'message' in uploadError
-              ? String(uploadError.message)
-              : 'Nao foi possivel guardar o video. Tenta novamente.';
-            setVideoCaptureError(message);
-          })
-          .finally(() => setIsVideoUploading(false));
+        setVideoCaptureTarget(null);
+        stopVideoStream();
       };
 
       recorder.start(1000);
