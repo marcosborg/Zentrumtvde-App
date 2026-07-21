@@ -21,21 +21,23 @@ import {
 import { add, camera, carSport, close, documentText, eye, refresh, videocam } from 'ionicons/icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  createVehicleHandover,
+  completeVehicleHandoverDraft,
+  createVehicleHandoverDraft,
+  deleteVehicleHandoverDraft,
   fetchVehicleHandover,
   fetchVehicleHandoversBootstrap,
-  uploadVehicleHandoverVideo,
+  updateVehicleHandoverDraft,
+  uploadVehicleHandoverDraftMedia,
 } from '../lib/frontpage-api';
 import { optimizeUploadFile, photoToOptimizedFile } from '../lib/upload-file-utils';
 import type {
   VehicleHandoverBootstrapPayload,
-  VehicleHandoverCreatePayload,
   VehicleHandoverDetail,
   VehicleHandoverDriver,
   VehicleHandoverVehicle,
+  HandoverDraftStep,
 } from '../types/handover';
 import SignaturePad from './SignaturePad';
-import VehicleInspectionMap from './VehicleInspectionMap';
 
 type VehicleHandoverPanelProps = {
   token: string | null;
@@ -63,8 +65,8 @@ type ProcedureDraft = {
   generalPhotos: string[];
   guidedPhotoItems: Record<string, string | null>;
   videoItems: {
-    exterior: string | null;
-    interior: string | null;
+    exterior: File | string | null;
+    interior: File | string | null;
   };
   notes: string;
   operatorSignature: string;
@@ -151,7 +153,9 @@ function buildDraft(type: ProcedureType, bootstrap: VehicleHandoverBootstrapPayl
 }
 
 function toPersistedDraft(draft: ProcedureDraft): PersistedProcedureDraft {
-  return draft;
+  const { videoItems, ...persistedDraft } = draft;
+  void videoItems;
+  return persistedDraft;
 }
 
 function fromPersistedDraft(
@@ -189,6 +193,10 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [activeProcedure, setActiveProcedure] = useState<VehicleHandoverDetail | null>(null);
   const [flowMode, setFlowMode] = useState<FlowMode>('delivery');
+  const [draftId, setDraftId] = useState<number | null>(null);
+  const [draftStep, setDraftStep] = useState<HandoverDraftStep>('photos');
+  const [photoStepIndex, setPhotoStepIndex] = useState(0);
+  const [syncState, setSyncState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   const [returnDraft, setReturnDraft] = useState<ProcedureDraft>(() => buildDraft('return', null));
   const [deliveryDraft, setDeliveryDraft] = useState<ProcedureDraft>(() => buildDraft('delivery', null));
   const [videoCaptureTarget, setVideoCaptureTarget] = useState<{ target: ProcedureType; key: 'exterior' | 'interior' } | null>(null);
@@ -208,6 +216,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
   const videoCancelRef = useRef(false);
   const nativeCameraOpenRef = useRef(false);
   const pendingGuidedPhotoRef = useRef<{ target: ProcedureType; zoneKey: string } | null>(null);
+  const autosaveTimersRef = useRef<Record<string, number>>({});
 
   const persistCreateState = (override?: Partial<PersistedCreateState>) => {
     try {
@@ -277,6 +286,29 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
           vehicleId: current.vehicleId,
           driverId: current.driverId,
         }));
+      }
+
+      if (payload.active_draft) {
+        const active = payload.active_draft;
+        const targetDraft = buildDraft(active.type, payload);
+        targetDraft.vehicleId = active.vehicle.id ?? null;
+        targetDraft.driverId = active.driver.id ?? null;
+        targetDraft.performedAt = active.performed_at?.slice(0, 16) ?? targetDraft.performedAt;
+        targetDraft.notes = active.notes ?? '';
+        targetDraft.operatorSignature = active.operator_signature_data_url ?? '';
+        targetDraft.driverSignature = active.driver_signature_data_url ?? '';
+        targetDraft.checklistState = Object.fromEntries(Object.entries(active.checklist_payload ?? {}).map(([key, item]) => [key, { checked: item.checked, value: item.value ?? '' }]));
+        targetDraft.guidedPhotoItems = Object.fromEntries((active.guided_photo_items ?? []).map((item) => [item.key, item.photo_url ?? null]));
+        targetDraft.generalPhotos = active.general_photo_paths ?? [];
+        targetDraft.damageItems = (active.damage_items ?? []).map((item) => ({ type: item.type ?? '', zone: item.zone ?? '', description: item.description ?? '', photo: item.photo_path ?? null }));
+        targetDraft.videoItems = {
+          exterior: active.video_items?.find((item) => item.key === 'exterior')?.video_url ?? null,
+          interior: active.video_items?.find((item) => item.key === 'interior')?.video_url ?? null,
+        };
+        setFlowMode(active.type);
+        if (active.type === 'return') setReturnDraft(targetDraft); else setDeliveryDraft(targetDraft);
+        setDraftId(active.id);
+        setDraftStep(active.draft_step ?? 'photos');
       }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Nao foi possivel carregar os procedimentos.');
@@ -378,6 +410,9 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     setReturnDraft(buildDraft('return', bootstrap));
     setDeliveryDraft(buildDraft('delivery', bootstrap));
     setCreateError('');
+    setDraftId(null);
+    setDraftStep('photos');
+    setPhotoStepIndex(0);
     clearPersistedCreateState();
   };
 
@@ -429,6 +464,53 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     setter((current) => ({ ...current, ...patch }));
   };
 
+  const saveDraftPatch = async (payload: Record<string, unknown>) => {
+    if (!token || !draftId) return null;
+    setSyncState('saving');
+    try {
+      const saved = await updateVehicleHandoverDraft(token, draftId, payload);
+      setSyncState('saved');
+      return saved;
+    } catch (saveError) {
+      setSyncState('failed');
+      setCreateError(saveError instanceof Error ? saveError.message : 'Falha ao guardar. Podes continuar e tentar novamente.');
+      return null;
+    }
+  };
+
+  const scheduleDraftPatch = (key: string, payload: Record<string, unknown>, delay = 500) => {
+    if (autosaveTimersRef.current[key]) window.clearTimeout(autosaveTimersRef.current[key]);
+    autosaveTimersRef.current[key] = window.setTimeout(() => {
+      delete autosaveTimersRef.current[key];
+      void saveDraftPatch(payload);
+    }, delay);
+  };
+
+  const beginDraft = async () => {
+    const draft = flowMode === 'return' ? returnDraft : deliveryDraft;
+    if (!token || !draft.vehicleId || !draft.driverId) {
+      setCreateError('Seleciona a viatura e o motorista.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const saved = await createVehicleHandoverDraft(token, { type: flowMode, vehicle_id: draft.vehicleId, driver_id: draft.driverId, performed_at: draft.performedAt });
+      setDraftId(saved.id);
+      setDraftStep('photos');
+      setSyncState('saved');
+      setCreateError('');
+    } catch (saveError) {
+      setCreateError(saveError instanceof Error ? saveError.message : 'Nao foi possivel criar o rascunho.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const goToStep = (step: HandoverDraftStep) => {
+    setDraftStep(step);
+    void saveDraftPatch({ draft_step: step });
+  };
+
   const updateChecklist = (target: ProcedureType, key: string, patch: Partial<{ checked: boolean; value: string }>) => {
     const draft = target === 'return' ? returnDraft : deliveryDraft;
     patchDraft(target, {
@@ -441,6 +523,11 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
         },
       },
     });
+    const nextChecklist = {
+      ...draft.checklistState,
+      [key]: { checked: draft.checklistState[key]?.checked ?? false, value: draft.checklistState[key]?.value ?? '', ...patch },
+    };
+    void saveDraftPatch({ checklist_payload: nextChecklist });
   };
 
   const setDamageField = (target: ProcedureType, index: number, patch: Partial<DamageDraft>) => {
@@ -474,6 +561,14 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
 
   useEffect(() => syncPhotoChecklist('return', returnDraft), [bootstrap?.guided_photo_zones, returnDraft.guidedPhotoItems]);
   useEffect(() => syncPhotoChecklist('delivery', deliveryDraft), [bootstrap?.guided_photo_zones, deliveryDraft.guidedPhotoItems]);
+  useEffect(() => {
+    if (!draftId || draftStep !== 'damage') return;
+    const draft = flowMode === 'return' ? returnDraft : deliveryDraft;
+    const timer = window.setTimeout(() => {
+      void saveDraftPatch({ damage_items: draft.damageItems, general_photos: draft.generalPhotos });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [draftId, draftStep, flowMode, returnDraft.damageItems, returnDraft.generalPhotos, deliveryDraft.damageItems, deliveryDraft.generalPhotos]);
 
   const autoFillFromSelection = (target: ProcedureType, draft: ProcedureDraft, vehicle: VehicleHandoverVehicle | null, driver: VehicleHandoverDriver | null) => {
     if (draft.selectionMode === 'vehicle' && vehicle?.current_driver_id && draft.driverId !== vehicle.current_driver_id) {
@@ -486,6 +581,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
   };
 
   useEffect(() => autoFillFromSelection('return', returnDraft, selectedReturnVehicle, selectedReturnDriver), [returnDraft.selectionMode, selectedReturnVehicle?.current_driver_id, selectedReturnDriver?.current_vehicle_id]);
+  useEffect(() => autoFillFromSelection('delivery', deliveryDraft, selectedDeliveryVehicle, selectedDeliveryDriver), [deliveryDraft.selectionMode, selectedDeliveryVehicle?.current_driver_id, selectedDeliveryDriver?.current_vehicle_id]);
   const handleGeneralPhotos = async (target: ProcedureType, event: Event) => {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -523,7 +619,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     }
   };
 
-  const setGuidedPhotoDataUrl = (target: ProcedureType, zoneKey: string, dataUrl: string) => {
+  const setGuidedPhotoDataUrl = async (target: ProcedureType, zoneKey: string, dataUrl: string) => {
     const draft = target === 'return' ? returnDraft : deliveryDraft;
 
     patchDraft(target, {
@@ -537,12 +633,23 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
       modalOpen: true,
       pendingGuidedPhoto: null,
     });
+    if (token && draftId) {
+      setSyncState('saving');
+      try {
+        await uploadVehicleHandoverDraftMedia(token, draftId, 'photo', zoneKey, dataUrl);
+        setSyncState('saved');
+        setPhotoStepIndex((index) => Math.min(index + 1, Math.max(0, (bootstrap?.guided_photo_zones.length ?? 1) - 1)));
+      } catch (saveError) {
+        setSyncState('failed');
+        setCreateError(saveError instanceof Error ? saveError.message : 'A foto ficou pendente de sincronizacao.');
+      }
+    }
   };
 
   const applyGuidedPhoto = async (target: ProcedureType, zoneKey: string, photo: Photo) => {
     const file = await photoToOptimizedFile(photo, zoneKey, HANDOVER_IMAGE_MAX_BYTES, HANDOVER_IMAGE_MAX_DIMENSION);
     const dataUrl = await fileToDataUrl(file);
-    setGuidedPhotoDataUrl(target, zoneKey, dataUrl);
+    await setGuidedPhotoDataUrl(target, zoneKey, dataUrl);
   };
 
   const handleGuidedPhotoCapture = async (target: ProcedureType, zoneKey: string) => {
@@ -615,7 +722,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
       const file = new File([blob], `${captureTarget.zoneKey}-${Date.now()}.jpg`, { type: 'image/jpeg' });
       const optimizedFile = await optimizeUploadFile(file, HANDOVER_IMAGE_MAX_BYTES, HANDOVER_IMAGE_MAX_DIMENSION);
       const dataUrl = await fileToDataUrl(optimizedFile);
-      setGuidedPhotoDataUrl(captureTarget.target, captureTarget.zoneKey, dataUrl);
+      await setGuidedPhotoDataUrl(captureTarget.target, captureTarget.zoneKey, dataUrl);
       setPhotoCaptureTarget(null);
       pendingGuidedPhotoRef.current = null;
       stopPhotoStream();
@@ -721,6 +828,24 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
           return;
         }
 
+        const draft = captureTarget.target === 'return' ? returnDraft : deliveryDraft;
+
+        patchDraft(captureTarget.target, {
+          videoItems: {
+            ...draft.videoItems,
+            [captureTarget.key]: file,
+          },
+        });
+        if (token && draftId) {
+          setSyncState('saving');
+          void uploadVehicleHandoverDraftMedia(token, draftId, 'video', captureTarget.key, file)
+            .then(() => setSyncState('saved'))
+            .catch((saveError) => {
+              setSyncState('failed');
+              setCreateError(saveError instanceof Error ? saveError.message : 'O video ficou pendente de sincronizacao.');
+            });
+        }
+        setCreateError('');
         setIsVideoRecording(false);
         setIsVideoUploading(true);
 
@@ -804,12 +929,31 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
       draft.driverSignature,
     ].reduce((total, value) => total + dataUrlBytes(value), 0);
 
-    return photoBytes;
+    return photoBytes
+      + (draft.videoItems.exterior instanceof File ? draft.videoItems.exterior.size : 0)
+      + (draft.videoItems.interior instanceof File ? draft.videoItems.interior.size : 0);
   };
 
   const validateDraft = (draft: ProcedureDraft, title: string): boolean => {
     if (!draft.vehicleId || !draft.driverId) {
       setCreateError(`${title}: seleciona a viatura e o motorista.`);
+      return false;
+    }
+
+    const vehicle = bootstrap?.vehicles.find((item) => item.id === draft.vehicleId);
+
+    if (draft.type === 'return' && !vehicle?.current_driver_id) {
+      setCreateError(`${title}: a devolucao exige uma viatura com motorista atribuido.`);
+      return false;
+    }
+
+    if (draft.type === 'return' && vehicle?.current_driver_id !== draft.driverId) {
+      setCreateError(`${title}: seleciona o motorista atualmente atribuido a esta viatura.`);
+      return false;
+    }
+
+    if (draft.type === 'delivery' && vehicle?.current_driver_id) {
+      setCreateError(`${title}: a entrega exige uma viatura sem motorista atribuido.`);
       return false;
     }
 
@@ -828,51 +972,14 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     return true;
   };
 
-  const toPayload = (draft: ProcedureDraft): VehicleHandoverCreatePayload => ({
-    type: draft.type,
-    vehicle_id: draft.vehicleId ?? 0,
-    driver_id: draft.driverId ?? 0,
-    performed_at: draft.performedAt,
-    checklist_payload: Object.fromEntries(
-      Object.entries(draft.checklistState).map(([key, value]) => [key, { checked: value.checked, value: value.value || null }]),
-    ),
-    damage_items: draft.damageItems
-      .filter((item) => item.type && item.zone)
-      .map((item) => ({
-        type: item.type,
-        zone: item.zone,
-        description: item.description,
-        photo: item.photo,
-      })),
-    guided_photo_items: Object.fromEntries(
-      Object.entries(draft.guidedPhotoItems).map(([key, value]) => [key, { photo: value }]),
-    ),
-    general_photos: draft.generalPhotos,
-    video_items: draft.videoItems,
-    notes: draft.notes,
-    operator_signature_data_url: draft.operatorSignature,
-    driver_signature_data_url: draft.driverSignature,
-  });
-
   const submit = async () => {
-    if (!token || !bootstrap) {
+    if (!token || !bootstrap || !draftId) {
       setCreateError('Sessao invalida.');
       return;
     }
 
-    if (isVideoUploading) {
-      setCreateError('Aguarda ate o video ficar guardado antes de concluir.');
-      return;
-    }
-
-    const activeReturn = flowMode === 'return';
-    const activeDelivery = flowMode === 'delivery';
-
-    if (activeReturn && !validateDraft(returnDraft, 'Recolha')) {
-      return;
-    }
-
-    if (activeDelivery && !validateDraft(deliveryDraft, 'Entrega')) {
+    const draft = flowMode === 'return' ? returnDraft : deliveryDraft;
+    if (!validateDraft(draft, flowMode === 'return' ? 'Recolha' : 'Entrega')) {
       return;
     }
 
@@ -880,7 +987,16 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     setCreateError('');
 
     try {
-      const procedure = await createVehicleHandover(token, toPayload(flowMode === 'return' ? returnDraft : deliveryDraft));
+      await saveDraftPatch({
+        performed_at: draft.performedAt,
+        checklist_payload: draft.checklistState,
+        damage_items: draft.damageItems,
+        general_photos: draft.generalPhotos,
+        notes: draft.notes,
+        operator_signature_data_url: draft.operatorSignature,
+        driver_signature_data_url: draft.driverSignature,
+      });
+      const procedure = await completeVehicleHandoverDraft(token, draftId);
 
       clearPersistedCreateState();
       setIsCreateModalOpen(false);
@@ -904,11 +1020,11 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
 
   const renderPicker = (target: ProcedureType, draft: ProcedureDraft, vehicle: VehicleHandoverVehicle | null, driver: VehicleHandoverDriver | null) => {
     const filteredVehicles = (bootstrap?.vehicles ?? [])
-      .filter((item) => target === 'return' || !item.current_driver_id)
+      .filter((item) => target === 'return' ? Boolean(item.current_driver_id) : !item.current_driver_id)
       .filter((item) => matchesQuery(`${item.display_name} ${item.current_driver_name ?? ''}`, draft.vehicleQuery))
       .slice(0, 20);
     const filteredDrivers = (bootstrap?.drivers ?? [])
-      .filter((item) => target === 'return' || !item.current_vehicle_id)
+      .filter((item) => target === 'return' ? Boolean(item.current_vehicle_id) : !item.current_vehicle_id)
       .filter((item) => matchesQuery(`${item.display_name} ${item.current_vehicle_license_plate ?? ''}`, draft.driverQuery))
       .slice(0, 20);
 
@@ -953,6 +1069,11 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
                   <span>{item.current_vehicle_license_plate ? `Atual: ${item.current_vehicle_license_plate}` : item.phone || 'Sem viatura atual'}</span>
                 </button>
               ))}
+              {!filteredDrivers.length ? (
+                <IonNote className="zt-handover-note">
+                  {target === 'return' ? 'Nao existem motoristas com viatura atribuida.' : 'Nao existem motoristas livres.'}
+                </IonNote>
+              ) : null}
             </div>
           </div>
           ) : null}
@@ -975,6 +1096,11 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
                   <span>{item.current_driver_name ? `Atual: ${item.current_driver_name}` : item.status_label}</span>
                 </button>
               ))}
+              {!filteredVehicles.length ? (
+                <IonNote className="zt-handover-note">
+                  {target === 'return' ? 'Nao existem viaturas com motorista atribuido.' : 'Nao existem viaturas sem motorista atribuido.'}
+                </IonNote>
+              ) : null}
             </div>
           </div>
           ) : null}
@@ -1010,14 +1136,18 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
           </IonChip>
         </div>
 
-        {renderPicker(target, draft, vehicle, driver)}
+        {!draftId ? (<>
+          {renderPicker(target, draft, vehicle, driver)}
+          <IonItem lines="full">
+            <IonLabel position="stacked">Data e hora</IonLabel>
+            <IonInput type="datetime-local" value={draft.performedAt} onIonInput={(event) => patchDraft(target, { performedAt: String(event.detail.value || '') })} />
+          </IonItem>
+          <IonButton expand="block" onClick={() => void beginDraft()} disabled={isSubmitting || !draft.vehicleId || !draft.driverId}>
+            {isSubmitting ? <IonSpinner name="crescent" /> : 'Iniciar recolha'}
+          </IonButton>
+        </>) : (<IonNote className="zt-handover-note">Rascunho #{draftId} · {syncState === 'saving' ? 'A guardar…' : syncState === 'failed' ? 'Falha ao guardar' : 'Guardado'}</IonNote>)}
 
-        <IonItem lines="full">
-          <IonLabel position="stacked">Data e hora</IonLabel>
-          <IonInput type="datetime-local" value={draft.performedAt} onIonInput={(event) => patchDraft(target, { performedAt: String(event.detail.value || '') })} />
-        </IonItem>
-
-        <div className="zt-handover-section">
+        {draftId && draftStep === 'checklist' ? <div className="zt-handover-section">
           <h3>Checklist</h3>
           {bootstrap?.checklist_items.filter((item) => item.key !== 'photos_inside_outside').map((item) => (
             <div key={item.key} className="zt-handover-checklist-row">
@@ -1038,25 +1168,31 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
               ) : null}
             </div>
           ))}
-        </div>
+        </div> : null}
 
-        <div className="zt-handover-section">
+        {draftId && draftStep === 'photos' ? <div className="zt-handover-section">
           <div className="zt-handover-section__header">
             <h3>Mapa fotografico</h3>
             <IonChip className={`zt-status-chip ${draft.checklistState.photos_inside_outside?.checked ? 'zt-status-chip--success' : 'zt-status-chip--warning'}`}>
               {draft.checklistState.photos_inside_outside?.checked ? 'Completo' : 'Em falta'}
             </IonChip>
           </div>
-          {bootstrap?.guided_photo_zones.length ? (
-            <VehicleInspectionMap
-              zones={bootstrap.guided_photo_zones}
-              photosByZone={draft.guidedPhotoItems}
-              onCapture={(zoneKey) => void handleGuidedPhotoCapture(target, zoneKey)}
-            />
-          ) : null}
-        </div>
+          {bootstrap?.guided_photo_zones[photoStepIndex] ? (() => {
+            const zone = bootstrap.guided_photo_zones[photoStepIndex];
+            return <div className="zt-handover-upload">
+              <IonIcon icon={camera} />
+              <strong>{photoStepIndex + 1} / {bootstrap.guided_photo_zones.length}: {zone.label}</strong>
+              <span>{draft.guidedPhotoItems[zone.key] ? 'Fotografia guardada. Podes substituir.' : 'Captura esta vista ou ignora.'}</span>
+              <IonButton onClick={() => void handleGuidedPhotoCapture(target, zone.key)}>{draft.guidedPhotoItems[zone.key] ? 'Substituir' : 'Capturar'}</IonButton>
+              <div className="zt-handover-video-actions">
+                <IonButton fill="clear" disabled={photoStepIndex === 0} onClick={() => setPhotoStepIndex((index) => Math.max(0, index - 1))}>Anterior</IonButton>
+                <IonButton fill="clear" onClick={() => setPhotoStepIndex((index) => Math.min(bootstrap.guided_photo_zones.length - 1, index + 1))}>Ignorar / seguinte</IonButton>
+              </div>
+            </div>;
+          })() : null}
+        </div> : null}
 
-        <div className="zt-handover-section">
+        {draftId && draftStep === 'videos' ? <div className="zt-handover-section">
           <h3>Videos</h3>
           <div className="zt-handover-video-grid">
             {(['exterior', 'interior'] as const).map((key) => (
@@ -1077,9 +1213,9 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
               </div>
             ))}
           </div>
-        </div>
+        </div> : null}
 
-        <div className="zt-handover-section">
+        {draftId && draftStep === 'damage' ? <><div className="zt-handover-section">
           <div className="zt-handover-section__header">
             <h3>Danos</h3>
             <IonButton fill="outline" size="small" onClick={() => patchDraft(target, { damageItems: [...draft.damageItems, { type: '', zone: '', description: '', photo: null }] })}>
@@ -1131,17 +1267,32 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
             <span>{draft.generalPhotos.length ? `${draft.generalPhotos.length} foto(s) pronta(s)` : 'Adicionar fotos opcionais da viatura'}</span>
             <input type="file" accept="image/*" multiple capture="environment" onChange={(event) => void handleGeneralPhotos(target, event.nativeEvent)} />
           </label>
-        </div>
+        </div></> : null}
 
-        <IonItem lines="full">
+        {draftId && draftStep === 'notes' ? <IonItem lines="full">
           <IonLabel position="stacked">Observacoes</IonLabel>
-          <IonTextarea value={draft.notes} onIonInput={(event) => patchDraft(target, { notes: String(event.detail.value || '') })} />
-        </IonItem>
+          <IonTextarea value={draft.notes} onIonInput={(event) => {
+            const notes = String(event.detail.value || ''); patchDraft(target, { notes }); scheduleDraftPatch('notes', { notes });
+          }} />
+        </IonItem> : null}
 
-        <div className="zt-handover-signatures">
-          <SignaturePad label="Assinatura do operador" value={draft.operatorSignature} onChange={(value) => patchDraft(target, { operatorSignature: value })} />
-          <SignaturePad label="Assinatura do motorista" value={draft.driverSignature} onChange={(value) => patchDraft(target, { driverSignature: value })} />
-        </div>
+        {draftId && draftStep === 'signatures' ? <div className="zt-handover-signatures">
+          <SignaturePad label="Assinatura do operador" value={draft.operatorSignature} onChange={(value) => { patchDraft(target, { operatorSignature: value }); scheduleDraftPatch('operator-signature', { operator_signature_data_url: value }); }} />
+          <SignaturePad label="Assinatura do motorista" value={draft.driverSignature} onChange={(value) => { patchDraft(target, { driverSignature: value }); scheduleDraftPatch('driver-signature', { driver_signature_data_url: value }); }} />
+        </div> : null}
+
+        {draftId && draftStep === 'review' ? <div className="zt-handover-section">
+          <h3>Concluir auto</h3>
+          <p>Confirma os dados guardados. Fotografias, videos e checklist podem ficar incompletos.</p>
+          <IonNote color={draft.driverSignature && draft.operatorSignature ? 'success' : 'danger'}>
+            {draft.driverSignature && draft.operatorSignature ? 'Assinaturas guardadas.' : 'As assinaturas do motorista e do operador sao obrigatorias.'}
+          </IonNote>
+        </div> : null}
+
+        {draftId ? <div className="zt-handover-video-actions">
+          {draftStep !== 'photos' ? <IonButton fill="outline" onClick={() => goToStep(({ videos: 'photos', checklist: 'videos', damage: 'checklist', notes: 'damage', signatures: 'notes', review: 'signatures' } as Record<string, HandoverDraftStep>)[draftStep])}>Anterior</IonButton> : null}
+          {draftStep !== 'review' ? <IonButton onClick={() => goToStep(({ photos: 'videos', videos: 'checklist', checklist: 'damage', damage: 'notes', notes: 'signatures', signatures: 'review' } as Record<string, HandoverDraftStep>)[draftStep])}>Seguinte</IonButton> : null}
+        </div> : null}
       </div>
     );
   };
@@ -1159,10 +1310,17 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
               <IonButton fill="clear" onClick={() => void loadBootstrap()}>
                 <IonIcon icon={refresh} slot="icon-only" />
               </IonButton>
-              <IonButton onClick={openCreateModal}>
+              <IonButton onClick={openCreateModal} disabled={Boolean(draftId)}>
                 <IonIcon icon={add} slot="start" />
                 Novo auto
               </IonButton>
+              {draftId ? <>
+                <IonButton fill="outline" onClick={() => setIsCreateModalOpen(true)}>Continuar rascunho</IonButton>
+                <IonButton fill="clear" color="danger" onClick={() => {
+                  if (!token || !draftId) return;
+                  void deleteVehicleHandoverDraft(token, draftId).then(() => { resetCreateState('delivery'); void loadBootstrap(); });
+                }}>Eliminar rascunho</IonButton>
+              </> : null}
             </div>
           </div>
 
@@ -1251,9 +1409,9 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
               </IonText>
             ) : null}
 
-            <IonButton expand="block" onClick={() => void submit()} disabled={isSubmitting || isVideoUploading}>
-              {isSubmitting ? <IonSpinner name="crescent" /> : 'Concluir procedimento'}
-            </IonButton>
+            {draftId && draftStep === 'review' ? <IonButton expand="block" onClick={() => void submit()} disabled={isSubmitting}>
+              {isSubmitting ? <IonSpinner name="crescent" /> : 'Concluir auto'}
+            </IonButton> : null}
           </div>
         </div>
       </IonModal>

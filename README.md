@@ -30,6 +30,16 @@ $env:CAP_SERVER_URL="http://localhost:5173"
 npx cap run android
 ```
 
+## Database safety while developing in the browser
+
+`npm run dev` loads `.env.development` and sends all API reads and writes to
+`http://127.0.0.1:8000`. The local `ZentrumTask` API must run with
+`DB_MODE=sandbox`; its current local `.env` is configured that way.
+
+Development mode refuses to start if `VITE_API_BASE_URL` is changed to
+`https://zentrum-tvde.com`, preventing browser testing from reaching the
+production database. Production builds use `.env.production` explicitly.
+
 ## Notas
 
 - Alteracoes em `React`, `TypeScript` e `CSS` atualizam com live reload.

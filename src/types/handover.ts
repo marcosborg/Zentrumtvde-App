@@ -58,6 +58,9 @@ export type VehicleHandoverSummary = {
 
 export type VehicleHandoverDetail = VehicleHandoverSummary & {
   status: string;
+  draft_step?: HandoverDraftStep | null;
+  completed_at?: string | null;
+  last_synced_at?: string | null;
   performed_date_label?: string | null;
   allocation_effective_start_date?: string | null;
   allocation_effective_start_date_label?: string | null;
@@ -76,9 +79,11 @@ export type VehicleHandoverDetail = VehicleHandoverSummary & {
     type?: string | null;
     zone?: string | null;
     description?: string | null;
+    photo_path?: string | null;
     photo_url?: string | null;
   }>;
   general_photo_urls: string[];
+  general_photo_paths?: string[];
   guided_photo_items: Array<{
     key: string;
     label: string;
@@ -119,7 +124,10 @@ export type VehicleHandoverBootstrapPayload = {
   vehicles: VehicleHandoverVehicle[];
   drivers: VehicleHandoverDriver[];
   recent_procedures: VehicleHandoverSummary[];
+  active_draft?: VehicleHandoverDetail | null;
 };
+
+export type HandoverDraftStep = 'photos' | 'videos' | 'checklist' | 'damage' | 'notes' | 'signatures' | 'review';
 
 export type VehicleHandoverCreatePayload = {
   type: 'delivery' | 'return';
