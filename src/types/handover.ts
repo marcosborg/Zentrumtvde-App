@@ -148,8 +148,3 @@ export type VehicleHandoverCreatePayload = {
   operator_signature_data_url: string;
   driver_signature_data_url: string;
 };
-
-export type VehicleHandoverExchangePayload = {
-  return_procedure: VehicleHandoverCreatePayload;
-  delivery_procedure: VehicleHandoverCreatePayload;
-};

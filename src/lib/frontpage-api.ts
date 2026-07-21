@@ -5,7 +5,6 @@ import type {
   VehicleHandoverBootstrapPayload,
   VehicleHandoverCreatePayload,
   VehicleHandoverDetail,
-  VehicleHandoverExchangePayload,
 } from '../types/handover';
 import type { KanbanBoardPayload, KanbanContactPayload, KanbanTaskPayload, KanbanTaskSearchPayload } from '../types/kanban';
 import type { ReservedOverviewPayload } from '../types/reserved';
@@ -45,7 +44,7 @@ export const chatMessageEndpoint = `${apiBaseUrl}/app/chat/message`;
 export const kanbanEndpoint = `${apiBaseUrl}/app/kanban`;
 export const reservedOpsEndpoint = `${apiBaseUrl}/app/ops/overview`;
 export const reservedVehicleHandoversEndpoint = `${apiBaseUrl}/app/ops/vehicle-handovers`;
-export const reservedVehicleHandoverExchangeEndpoint = `${reservedVehicleHandoversEndpoint}/exchange`;
+export const reservedVehicleHandoverMediaEndpoint = `${reservedVehicleHandoversEndpoint}/media`;
 
 export type ContactFormPayload = {
   name: string;
@@ -496,29 +495,25 @@ export async function createVehicleHandover(token: string, payload: VehicleHando
   return data.procedure;
 }
 
-export async function createVehicleHandoverExchange(
-  token: string,
-  payload: VehicleHandoverExchangePayload,
-): Promise<{ return: VehicleHandoverDetail; delivery: VehicleHandoverDetail }> {
+export async function uploadVehicleHandoverVideo(token: string, video: File): Promise<string> {
   const formData = new FormData();
-  appendHandoverPayload(formData, 'return_procedure', payload.return_procedure);
-  appendHandoverPayload(formData, 'delivery_procedure', payload.delivery_procedure);
+  formData.append('video', video, video.name);
 
-  const response = await authFetch(reservedVehicleHandoverExchangeEndpoint, token, {
+  const response = await authFetch(reservedVehicleHandoverMediaEndpoint, token, {
     method: 'POST',
     body: formData,
   });
 
   const data = (await response.json().catch(() => null)) as
-    | { procedures: { return: VehicleHandoverDetail; delivery: VehicleHandoverDetail }; message?: string; errors?: Record<string, string[]> }
+    | { path: string; url: string; message?: string; errors?: Record<string, string[]> }
     | { message?: string; errors?: Record<string, string[]> }
     | null;
 
-  if (!response.ok || !data || !('procedures' in data)) {
-    throw data ?? new Error('Nao foi possivel registar a troca.');
+  if (!response.ok || !data || !('path' in data)) {
+    throw data ?? new Error('Nao foi possivel guardar o video.');
   }
 
-  return data.procedures;
+  return data.path;
 }
 
 export async function fetchVehicleHandover(token: string, procedureId: number): Promise<VehicleHandoverDetail> {

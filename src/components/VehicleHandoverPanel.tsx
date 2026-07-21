@@ -1,5 +1,5 @@
 import { App as CapacitorApp } from '@capacitor/app';
-import { Camera, CameraResultType, CameraSource, type Photo } from '@capacitor/camera';
+import type { Photo } from '@capacitor/camera';
 import {
   IonButton,
   IonCard,
@@ -22,9 +22,9 @@ import { add, camera, carSport, close, documentText, eye, refresh, videocam } fr
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createVehicleHandover,
-  createVehicleHandoverExchange,
   fetchVehicleHandover,
   fetchVehicleHandoversBootstrap,
+  uploadVehicleHandoverVideo,
 } from '../lib/frontpage-api';
 import { optimizeUploadFile, photoToOptimizedFile } from '../lib/upload-file-utils';
 import type {
@@ -41,7 +41,7 @@ type VehicleHandoverPanelProps = {
   token: string | null;
 };
 
-type FlowMode = 'delivery' | 'return' | 'exchange';
+type FlowMode = 'delivery' | 'return';
 type ProcedureType = 'delivery' | 'return';
 type SelectionMode = 'vehicle' | 'driver';
 
@@ -63,8 +63,8 @@ type ProcedureDraft = {
   generalPhotos: string[];
   guidedPhotoItems: Record<string, string | null>;
   videoItems: {
-    exterior: File | null;
-    interior: File | null;
+    exterior: string | null;
+    interior: string | null;
   };
   notes: string;
   operatorSignature: string;
@@ -73,7 +73,7 @@ type ProcedureDraft = {
   driverQuery: string;
 };
 
-type PersistedProcedureDraft = Omit<ProcedureDraft, 'videoItems'>;
+type PersistedProcedureDraft = ProcedureDraft;
 
 type PersistedCreateState = {
   modalOpen: boolean;
@@ -151,8 +151,7 @@ function buildDraft(type: ProcedureType, bootstrap: VehicleHandoverBootstrapPayl
 }
 
 function toPersistedDraft(draft: ProcedureDraft): PersistedProcedureDraft {
-  const { videoItems: _videoItems, ...persistedDraft } = draft;
-  return persistedDraft;
+  return draft;
 }
 
 function fromPersistedDraft(
@@ -170,10 +169,7 @@ function fromPersistedDraft(
       ...buildDraft(persistedDraft.type, bootstrap).guidedPhotoItems,
       ...persistedDraft.guidedPhotoItems,
     },
-    videoItems: {
-      exterior: null,
-      interior: null,
-    },
+    videoItems: persistedDraft.videoItems ?? { exterior: null, interior: null },
   };
 }
 
@@ -199,6 +195,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
   const [videoCaptureError, setVideoCaptureError] = useState('');
   const [videoCaptureSeconds, setVideoCaptureSeconds] = useState(0);
   const [isVideoRecording, setIsVideoRecording] = useState(false);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [photoCaptureTarget, setPhotoCaptureTarget] = useState<{ target: ProcedureType; zoneKey: string } | null>(null);
   const [photoCaptureError, setPhotoCaptureError] = useState('');
   const photoPreviewRef = useRef<HTMLVideoElement | null>(null);
@@ -224,7 +221,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
         ...override,
       };
 
-      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(snapshot));
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(snapshot));
     } catch {
       // Best-effort safety net for Android camera handoff.
     }
@@ -232,7 +229,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
 
   const clearPersistedCreateState = () => {
     try {
-      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch {
       // Ignore storage failures.
     }
@@ -254,7 +251,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
       let parsedState: PersistedCreateState | null = null;
 
       try {
-        const storedState = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        const storedState = localStorage.getItem(DRAFT_STORAGE_KEY);
         parsedState = storedState ? JSON.parse(storedState) as PersistedCreateState : null;
       } catch {
         parsedState = null;
@@ -264,7 +261,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
 
       if (shouldRestore && parsedState) {
         pendingGuidedPhotoRef.current = parsedState.pendingGuidedPhoto ?? null;
-        setFlowMode(parsedState.flowMode);
+        setFlowMode(parsedState.flowMode === 'return' ? 'return' : 'delivery');
         setReturnDraft(fromPersistedDraft(parsedState.returnDraft, payload));
         setDeliveryDraft(fromPersistedDraft(parsedState.deliveryDraft, payload));
         setIsCreateModalOpen(parsedState.modalOpen);
@@ -302,7 +299,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
 
       if (!pendingPhoto) {
         try {
-          const storedState = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+          const storedState = localStorage.getItem(DRAFT_STORAGE_KEY);
           const parsedState = storedState ? JSON.parse(storedState) as PersistedCreateState : null;
           pendingPhoto = parsedState?.pendingGuidedPhoto ?? null;
         } catch {
@@ -385,7 +382,9 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
   };
 
   const openCreateModal = () => {
-    resetCreateState('delivery');
+    if (!localStorage.getItem(DRAFT_STORAGE_KEY)) {
+      resetCreateState('delivery');
+    }
     setIsCreateModalOpen(true);
   };
 
@@ -396,8 +395,15 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     }
 
     setIsCreateModalOpen(false);
-    clearPersistedCreateState();
   };
+
+  useEffect(() => {
+    if (!bootstrap) {
+      return;
+    }
+
+    persistCreateState();
+  }, [bootstrap, flowMode, isCreateModalOpen, returnDraft, deliveryDraft]);
 
   const openProcedure = async (procedureId: number) => {
     if (!token) {
@@ -480,13 +486,6 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
   };
 
   useEffect(() => autoFillFromSelection('return', returnDraft, selectedReturnVehicle, selectedReturnDriver), [returnDraft.selectionMode, selectedReturnVehicle?.current_driver_id, selectedReturnDriver?.current_vehicle_id]);
-  useEffect(() => autoFillFromSelection('delivery', deliveryDraft, selectedDeliveryVehicle, selectedDeliveryDriver), [deliveryDraft.selectionMode, selectedDeliveryVehicle?.current_driver_id, selectedDeliveryDriver?.current_vehicle_id]);
-  useEffect(() => {
-    if (flowMode === 'exchange' && returnDraft.driverId && !deliveryDraft.driverId) {
-      patchDraft('delivery', { driverId: returnDraft.driverId });
-    }
-  }, [flowMode, returnDraft.driverId, deliveryDraft.driverId]);
-
   const handleGeneralPhotos = async (target: ProcedureType, event: Event) => {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -684,7 +683,10 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     try {
       videoChunksRef.current = [];
       videoCancelRef.current = false;
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const recorder = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        videoBitsPerSecond: 1_200_000,
+      });
       videoRecorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
@@ -719,18 +721,29 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
           return;
         }
 
-        const draft = captureTarget.target === 'return' ? returnDraft : deliveryDraft;
-
-        patchDraft(captureTarget.target, {
-          videoItems: {
-            ...draft.videoItems,
-            [captureTarget.key]: file,
-          },
-        });
-        setCreateError('');
         setIsVideoRecording(false);
-        setVideoCaptureTarget(null);
-        stopVideoStream();
+        setIsVideoUploading(true);
+
+        void uploadVehicleHandoverVideo(token ?? '', file)
+          .then((path) => {
+            const draft = captureTarget.target === 'return' ? returnDraft : deliveryDraft;
+            patchDraft(captureTarget.target, {
+              videoItems: {
+                ...draft.videoItems,
+                [captureTarget.key]: path,
+              },
+            });
+            setCreateError('');
+            setVideoCaptureTarget(null);
+            stopVideoStream();
+          })
+          .catch((uploadError: unknown) => {
+            const message = uploadError && typeof uploadError === 'object' && 'message' in uploadError
+              ? String(uploadError.message)
+              : 'Nao foi possivel guardar o video. Tenta novamente.';
+            setVideoCaptureError(message);
+          })
+          .finally(() => setIsVideoUploading(false));
       };
 
       recorder.start(1000);
@@ -791,7 +804,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
       draft.driverSignature,
     ].reduce((total, value) => total + dataUrlBytes(value), 0);
 
-    return photoBytes + (draft.videoItems.exterior?.size ?? 0) + (draft.videoItems.interior?.size ?? 0);
+    return photoBytes;
   };
 
   const validateDraft = (draft: ProcedureDraft, title: string): boolean => {
@@ -847,8 +860,13 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
       return;
     }
 
-    const activeReturn = flowMode === 'return' || flowMode === 'exchange';
-    const activeDelivery = flowMode === 'delivery' || flowMode === 'exchange';
+    if (isVideoUploading) {
+      setCreateError('Aguarda ate o video ficar guardado antes de concluir.');
+      return;
+    }
+
+    const activeReturn = flowMode === 'return';
+    const activeDelivery = flowMode === 'delivery';
 
     if (activeReturn && !validateDraft(returnDraft, 'Recolha')) {
       return;
@@ -862,20 +880,6 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
     setCreateError('');
 
     try {
-      if (flowMode === 'exchange') {
-        const result = await createVehicleHandoverExchange(token, {
-          return_procedure: toPayload(returnDraft),
-          delivery_procedure: toPayload(deliveryDraft),
-        });
-
-        clearPersistedCreateState();
-        setIsCreateModalOpen(false);
-        await loadBootstrap();
-        setActiveProcedure(result.delivery);
-        setIsDetailModalOpen(true);
-        return;
-      }
-
       const procedure = await createVehicleHandover(token, toPayload(flowMode === 'return' ? returnDraft : deliveryDraft));
 
       clearPersistedCreateState();
@@ -900,15 +904,17 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
 
   const renderPicker = (target: ProcedureType, draft: ProcedureDraft, vehicle: VehicleHandoverVehicle | null, driver: VehicleHandoverDriver | null) => {
     const filteredVehicles = (bootstrap?.vehicles ?? [])
+      .filter((item) => target === 'return' || !item.current_driver_id)
       .filter((item) => matchesQuery(`${item.display_name} ${item.current_driver_name ?? ''}`, draft.vehicleQuery))
       .slice(0, 20);
     const filteredDrivers = (bootstrap?.drivers ?? [])
+      .filter((item) => target === 'return' || !item.current_vehicle_id)
       .filter((item) => matchesQuery(`${item.display_name} ${item.current_vehicle_license_plate ?? ''}`, draft.driverQuery))
       .slice(0, 20);
 
     return (
       <>
-        <IonItem lines="full">
+        {target === 'return' ? <IonItem lines="full">
           <IonLabel position="stacked">Comecar por</IonLabel>
           <IonSelect
             value={draft.selectionMode}
@@ -922,10 +928,14 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
             <IonSelectOption value="driver">Motorista</IonSelectOption>
             <IonSelectOption value="vehicle">Matricula</IonSelectOption>
           </IonSelect>
-        </IonItem>
+        </IonItem> : (
+          <IonNote className="zt-handover-note">
+            Seleciona livremente a viatura disponivel e o motorista que a vai receber.
+          </IonNote>
+        )}
 
-        <div className="zt-handover-search-grid zt-handover-search-grid--single">
-          {draft.selectionMode === 'driver' ? (
+        <div className={`zt-handover-search-grid ${target === 'return' ? 'zt-handover-search-grid--single' : ''}`}>
+          {(target === 'delivery' || draft.selectionMode === 'driver') ? (
           <div>
             <IonSearchbar value={draft.driverQuery} placeholder="Pesquisar motorista" debounce={150} onIonInput={(event) => patchDraft(target, { driverQuery: event.detail.value || '' })} />
             <div className="zt-handover-choice-list">
@@ -934,7 +944,10 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
                   key={item.id}
                   type="button"
                   className={`zt-handover-choice ${draft.driverId === item.id ? 'is-active' : ''}`}
-                  onClick={() => patchDraft(target, { driverId: item.id, vehicleId: draft.selectionMode === 'driver' && item.current_vehicle_id ? item.current_vehicle_id : draft.vehicleId })}
+                  onClick={() => patchDraft(target, {
+                    driverId: item.id,
+                    vehicleId: target === 'return' && item.current_vehicle_id ? item.current_vehicle_id : draft.vehicleId,
+                  })}
                 >
                   <strong>{item.name}</strong>
                   <span>{item.current_vehicle_license_plate ? `Atual: ${item.current_vehicle_license_plate}` : item.phone || 'Sem viatura atual'}</span>
@@ -944,7 +957,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
           </div>
           ) : null}
 
-          {draft.selectionMode === 'vehicle' ? (
+          {(target === 'delivery' || draft.selectionMode === 'vehicle') ? (
           <div>
             <IonSearchbar value={draft.vehicleQuery} placeholder="Pesquisar matricula" debounce={150} onIonInput={(event) => patchDraft(target, { vehicleQuery: event.detail.value || '' })} />
             <div className="zt-handover-choice-list">
@@ -953,7 +966,10 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
                   key={item.id}
                   type="button"
                   className={`zt-handover-choice ${draft.vehicleId === item.id ? 'is-active' : ''}`}
-                  onClick={() => patchDraft(target, { vehicleId: item.id, driverId: draft.selectionMode === 'vehicle' && item.current_driver_id ? item.current_driver_id : draft.driverId })}
+                  onClick={() => patchDraft(target, {
+                    vehicleId: item.id,
+                    driverId: target === 'return' && item.current_driver_id ? item.current_driver_id : draft.driverId,
+                  })}
                 >
                   <strong>{item.license_plate}</strong>
                   <span>{item.current_driver_name ? `Atual: ${item.current_driver_name}` : item.status_label}</span>
@@ -1046,7 +1062,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
             {(['exterior', 'interior'] as const).map((key) => (
               <div key={key} className="zt-handover-upload zt-handover-video-card">
                 <IonIcon icon={videocam} />
-                <span>{draft.videoItems[key] ? `${key === 'exterior' ? 'Exterior' : 'Interior'} pronto (${formatMb(draft.videoItems[key]?.size ?? 0)})` : `Gravar video ${key === 'exterior' ? 'exterior' : 'interior'} ate ${formatMb(VIDEO_MAX_BYTES)} (opcional)`}</span>
+                <span>{draft.videoItems[key] ? `${key === 'exterior' ? 'Exterior' : 'Interior'} guardado` : `Gravar video ${key === 'exterior' ? 'exterior' : 'interior'} ate ${formatMb(VIDEO_MAX_BYTES)} (opcional)`}</span>
                 <div className="zt-handover-video-actions">
                   <IonButton size="small" fill="outline" onClick={() => void startVideoCapture(target, key)}>
                     <IonIcon icon={videocam} slot="start" />
@@ -1136,7 +1152,7 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
         <IonCardContent>
           <div className="zt-handover-card__header">
             <div>
-              <strong>Entregas, recolhas &amp; trocas</strong>
+              <strong>Entregas e recolhas</strong>
               <p>Autos completos com motorista, matricula, evidencias, PDF e email.</p>
             </div>
             <div className="zt-handover-card__actions">
@@ -1223,19 +1239,11 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
                   <strong>Recolha / devolucao</strong>
                   <span>Fechar a viatura atual do motorista.</span>
                 </button>
-                <button
-                  type="button"
-                  className={`zt-handover-flow-option ${flowMode === 'exchange' ? 'is-active' : ''}`}
-                  onClick={() => resetCreateState('exchange')}
-                >
-                  <strong>Troca de viatura</strong>
-                  <span>Fazer recolha e entrega em dois autos ligados.</span>
-                </button>
               </div>
             </div>
 
-            {(flowMode === 'return' || flowMode === 'exchange') ? renderProcedureForm('return', flowMode === 'exchange' ? '1. Recolha da viatura atual' : 'Recolha da viatura') : null}
-            {(flowMode === 'delivery' || flowMode === 'exchange') ? renderProcedureForm('delivery', flowMode === 'exchange' ? '2. Entrega da nova viatura' : 'Entrega da viatura') : null}
+            {flowMode === 'return' ? renderProcedureForm('return', 'Recolha da viatura') : null}
+            {flowMode === 'delivery' ? renderProcedureForm('delivery', 'Entrega da viatura') : null}
 
             {createError ? (
               <IonText color="danger">
@@ -1243,8 +1251,8 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
               </IonText>
             ) : null}
 
-            <IonButton expand="block" onClick={() => void submit()} disabled={isSubmitting}>
-              {isSubmitting ? <IonSpinner name="crescent" /> : flowMode === 'exchange' ? 'Guardar troca completa' : 'Guardar procedimento'}
+            <IonButton expand="block" onClick={() => void submit()} disabled={isSubmitting || isVideoUploading}>
+              {isSubmitting ? <IonSpinner name="crescent" /> : 'Concluir procedimento'}
             </IonButton>
           </div>
         </div>
@@ -1305,7 +1313,12 @@ const VehicleHandoverPanel: React.FC<VehicleHandoverPanelProps> = ({ token }) =>
           ) : null}
 
           <div className="zt-video-recorder__actions">
-            {isVideoRecording ? (
+            {isVideoUploading ? (
+              <IonButton expand="block" disabled>
+                <IonSpinner name="crescent" />
+                A guardar video...
+              </IonButton>
+            ) : isVideoRecording ? (
               <IonButton expand="block" color="danger" onClick={stopVideoRecording}>
                 Parar e guardar
               </IonButton>
